@@ -1,5 +1,5 @@
-@font-face { font-family: 'Mutern'; src: url('assets/fonts/MuternVF.ttf') format('truetype'); font-weight: 100 900; font-stretch: 50% 200%; font-display: swap; }
-@font-face { font-family: 'MuternUI'; src: url('assets/fonts/MuternVF.ttf') format('truetype'); font-weight: 100 900; font-display: block; }
+@font-face { font-family: 'Mutern'; src: url('assets/fonts/MuternVF.woff2') format('woff2'), url('assets/fonts/MuternVF.ttf') format('truetype'); font-weight: 100 900; font-stretch: 50% 200%; font-display: swap; }
+@font-face { font-family: 'MuternUI'; src: url('assets/fonts/MuternVF.woff2') format('woff2'), url('assets/fonts/MuternVF.ttf') format('truetype'); font-weight: 100 900; font-display: block; }
 @property --p { syntax: '<number>'; inherits: true; initial-value: 0; }
 
 :root {
@@ -355,8 +355,8 @@ em.ink { color: #000; }
 .sec-abon { position: relative; padding: 2px 8px; margin-top: 120px; z-index: 3; } /* room the landed cards occupy (no empty band at rest) */
 .abon-pin { position: relative; height: 317px; }
 .abon { position: absolute; inset: 0; }
-.abon__bg { position: absolute; inset: 0; border-radius: 32px; background: url(assets/abon-pattern.png) 0 0 / 42px 36.4px, var(--red); transform-origin: 50% 100%; }
-.abon__bg::after { content: ''; position: absolute; inset: 0; border-radius: 32px; background: url(assets/abon-shade.png) center bottom / 100% 100% no-repeat; mix-blend-mode: multiply; }
+.abon__bg { position: absolute; inset: 0; border-radius: 32px; background: url(assets/abon-pattern.webp) 0 0 / 42px 36.4px, var(--red); transform-origin: 50% 100%; }
+.abon__bg::after { content: ''; position: absolute; inset: 0; border-radius: 32px; background: url(assets/abon-shade.webp) center bottom / 100% 100% no-repeat; mix-blend-mode: multiply; }
 .abon__txt { position: absolute; left: 0; right: 0; top: 130px; height: 105px; display: flex; flex-direction: column; gap: 12px; text-align: center; }
 .abon__txt p { font-size: 12px; line-height: 18px; }
 .abon__btnwrap { position: absolute; left: 0; right: 0; bottom: 0; height: 48px; overflow: hidden; border-radius: 0 0 32px 32px; }
@@ -537,7 +537,7 @@ em.ink { color: #000; }
   transform-origin: 50% 100%; transform: perspective(800px) translateY(84px) rotateX(10deg); opacity: 0;
   transition: transform .78s var(--ease-ios), opacity .3s .48s; }
 /* Figma "Union" — dark red (#250003) panel with concave top corners */
-.cart__bg { position: absolute; left: 0; right: 0; bottom: -18px; height: 172.4px; background: url(assets/cart-panel.png?v=2) 0 0 / 100% 100% no-repeat; }
+.cart__bg { position: absolute; left: 0; right: 0; bottom: -18px; height: 172.4px; background: url(assets/cart-panel.webp?v=2) 0 0 / 100% 100% no-repeat; }
 .cart__in { position: relative; padding: 12px 6px; }
 .cart__bar { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 12px; }
 .cart__bar > * { opacity: 0; transform: translateY(12px); filter: blur(4px); transition: opacity .25s, transform .3s var(--ease-ios), filter .25s; }
@@ -591,7 +591,7 @@ em.ink { color: #000; }
 .m-block { padding: 2px 8px; }
 /* the fill is stretched to the whole card like in Figma: the photo occupies the top ~71% of the
    image and ends exactly where the button starts (the rest of the file is transparent) */
-.promo { position: relative; border-radius: 32px; overflow: hidden; padding-top: 18px; display: flex; flex-direction: column; justify-content: flex-end; gap: 12px; background: url(assets/menu-academy.png) 0 0 / 100% 100% no-repeat, #222226; }
+.promo { position: relative; border-radius: 32px; overflow: hidden; padding-top: 18px; display: flex; flex-direction: column; justify-content: flex-end; gap: 12px; background: url(assets/menu-academy.webp) 0 0 / 100% 100% no-repeat, #222226; }
 .promo::before { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,.5); }
 .promo__txt { position: relative; padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
 .promo__txt h3 { font-family: var(--f-display); font-weight: 400; font-size: 22px; line-height: 22px; }

@@ -137,9 +137,9 @@
 
   /* ---------- hero ---------- */
   const SLIDES = [
-    { photo: 'slide-1-fig.png', fill: true, date: '16 сентября 22:11', cat: 'Пресс-конференции', title: 'Карседо: «Играем первым номером»', cap: 'Карседо: «Играем первым номером»', desc: 'Пресс-конференция главного тренера красно-белых Хуана Карлоса Карседо после домашней победы.' },
-    { bg: 'slide-2-bg.png', photo: 'slide-2.png', crop: 'height:138.18%;left:-80.5%;top:0;width:261%', date: '13 сентября 16:27', cat: 'Мерч', title: 'Новая ретро-джерси', cap: 'Новая ретро-джерси', desc: 'Ретро-форма уже в продаже. Количество ограничено · 6 990 ₽.' },
-    { bg: 'slide-3-bg.png', photo: 'slide-3.png', date: '9 сентября 8:49', cat: 'Новости', title: 'Лучшие игроки месяца', mid: true, cap: 'Лучшие игроки месяца', desc: 'Игроки нашей команды в числе лучших игроков лиги в сентябре.' },
+    { photo: 'slide-1-fig.webp', fill: true, date: '16 сентября 22:11', cat: 'Пресс-конференции', title: 'Карседо: «Играем первым номером»', cap: 'Карседо: «Играем первым номером»', desc: 'Пресс-конференция главного тренера красно-белых Хуана Карлоса Карседо после домашней победы.' },
+    { bg: 'slide-2-bg.webp', photo: 'slide-2.webp', crop: 'height:138.18%;left:-80.5%;top:0;width:261%', date: '13 сентября 16:27', cat: 'Мерч', title: 'Новая ретро-джерси', cap: 'Новая ретро-джерси', desc: 'Ретро-форма уже в продаже. Количество ограничено · 6 990 ₽.' },
+    { bg: 'slide-3-bg.webp', photo: 'slide-3.webp', date: '9 сентября 8:49', cat: 'Новости', title: 'Лучшие игроки месяца', mid: true, cap: 'Лучшие игроки месяца', desc: 'Игроки нашей команды в числе лучших игроков лиги в сентябре.' },
   ];
   // The soft edges are blurred copies of the slide's own picture under gradient masks (not a masked
   // backdrop-filter: Chrome drops that mask in several compositing cases and draws a hard edge).
@@ -213,11 +213,11 @@
 
   /* ================= stories ================= */
   const STORIES = [
-    { t: 'Матч', img: 'story-1.png', fresh: true },
-    { t: 'Интервью', img: 'story-2.png', fresh: true },
-    { t: 'ЖФК', img: 'story-3.png' },
-    { t: 'Мерч', img: 'story-4.png', crop: 'height:160%;left:-83.43%;top:-37.5%;width:266.87%' },
-    { t: 'Академия', img: 'story-5.png', crop: 'height:100%;left:-92.92%;top:0;width:185.85%' },
+    { t: 'Матч', img: 'story-1.webp', fresh: true },
+    { t: 'Интервью', img: 'story-2.webp', fresh: true },
+    { t: 'ЖФК', img: 'story-3.webp' },
+    { t: 'Мерч', img: 'story-4.webp', crop: 'height:160%;left:-83.43%;top:-37.5%;width:266.87%' },
+    { t: 'Академия', img: 'story-5.webp', crop: 'height:100%;left:-92.92%;top:0;width:185.85%' },
   ];
   const storiesEl = $('#stories');
   storiesEl.innerHTML = STORIES.map((s, i) => `
