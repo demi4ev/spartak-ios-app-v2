@@ -368,30 +368,66 @@
     });
   }
 
-  // season ticket: pinned. The Figma cards image first shows up big in the middle of the screen, closer
-  // to the viewer and turned a little; while pinned it settles into exactly the Figma pose on the panel,
-  // its shadow tightening as it lands. Then the panel rises and the button slides up.
-  const CARDS_FROM = { x: 22, y: 150, rx: -20, ry: 12, rz: -6, s: 1.32 };
+  // season ticket (Figma Frame 72): no pinning — the block scrolls like any other and the motion is
+  // pure parallax. While the panel rises from the bottom edge to the upper third of the screen, the
+  // (always opaque) cards wait below the screen until the panel shows up, then rise over the block above
+  // through the three Figma poses — huge and turned, then less, then upright on the panel. The block above (the table) acts as the back layer:
+  // as the cards fly over it, it sinks back — drifts slower than the page, shrinks a touch and dims.
+  // Input is smoothed with a short critically-damped follow so it is fluid but quick.
+  const ABON_END = 190; // panel top (px from the screen top) where the cards land
+  // relative to the final pose: translate (px), rotate (deg), scale of the 976px element.
+  // k0 is extra: the cards wait below the screen while the table above is still in view, then rise
+  // through the three Figma poses (k1–k3).
+  const POSES = [
+    { x: 70, y: 620, r: 52, s: 1 },
+    { x: 43.84, y: -137.65, r: 41.54, s: 1 },
+    { x: 0, y: -46.1, r: 24.17, s: 782 / 976.361 },
+    { x: 0, y: 0, r: 0, s: 440 / 976.361 },
+  ];
+  // uniform Catmull-Rom through all poses (no stop at the middle ones)
+  const through = (k, t) => {
+    const n = k.length - 1, u = Math.min(t * n, n - 1e-6), i = Math.floor(u), f = u - i, o = {};
+    const P = j => k[Math.max(0, Math.min(n, j))];
+    for (const key in k[0]) {
+      const p0 = P(i - 1)[key], p1 = P(i)[key], p2 = P(i + 1)[key], p3 = P(i + 2)[key];
+      o[key] = .5 * (2 * p1 + (-p0 + p2) * f + (2 * p0 - 5 * p1 + 4 * p2 - p3) * f * f + (-p0 + 3 * p1 - 3 * p2 + p3) * f * f * f);
+    }
+    return o;
+  };
+  const abonState = new Map();
+  let abonRaf = 0, abonLast = 0;
   function updateAbon(sc) {
-    const pr = phone.getBoundingClientRect(), H = pr.height, PIN = 250, RUN = 520;
+    const pr = phone.getBoundingClientRect(), H = pr.height;
     $$('.sec-abon', sc).forEach(sec => {
-      const top = sec.getBoundingClientRect().top - pr.top;
-      const a = clamp((H - top) / (H - PIN));
-      const b = clamp((PIN - top) / RUN);
-      const m = easeInOut(clamp((b - .04) / .58));
-      const P = easeOut(clamp((b - .3) / .35));
-      const T = easeOut(clamp((b - .54) / .3));
-      const Bt = easeOut(clamp((b - .7) / .26));
-      const f = CARDS_FROM, k = 1 - m, ea = easeOut(a);
-      const rise = (1 - ea) * 220; // floats in from below while the section enters
-      const cardsEl = $('.abon-cards', sec);
-      cardsEl.style.transform = `translate(${f.x * k}px, ${f.y * k + rise}px) rotateX(${f.rx * k - (1 - ea) * 10}deg) rotateY(${f.ry * k}deg) rotateZ(${f.rz * k}deg) scale(${1 + (f.s - 1) * k})`;
-      cardsEl.style.opacity = String(clamp(a * 2.5));
-      cardsEl.style.filter = `drop-shadow(0 ${(4 + k * 26).toFixed(1)}px ${(12 + k * 26).toFixed(1)}px rgba(0,0,0,${(.25 + k * .2).toFixed(2)}))`;
-      $('.abon__bg', sec).style.cssText = `opacity:${P};transform:translateY(${(1 - P) * 90}px) scale(${.9 + .1 * P})`;
-      $('.abon__txt', sec).style.cssText = `opacity:${T};transform:translateY(${(1 - T) * 34}px);filter:blur(${(1 - T) * 6}px)`;
-      $('.abon__btn', sec).style.cssText = `transform:translateY(${(1 - Bt) * 100}%)`;
+      const top = $('.abon-pin', sec).getBoundingClientRect().top - pr.top;
+      const st = abonState.get(sec) || { cur: null };
+      st.target = clamp((H - 60 - top) / (H - 60 - ABON_END)); // starts once the panel is a little way on screen
+      if (st.cur == null) st.cur = st.target;
+      abonState.set(sec, st);
     });
+    if (!abonRaf) { abonLast = performance.now(); abonRaf = requestAnimationFrame(abonTick); }
+  }
+  function abonTick(now) {
+    const dt = Math.min(now - abonLast, 64); abonLast = now;
+    const f = 1 - Math.exp(-dt / 55); // ~55ms follow: fluid, never sluggish
+    let moving = false;
+    abonState.forEach((st, sec) => {
+      st.cur += (st.target - st.cur) * f;
+      if (Math.abs(st.target - st.cur) < .0004) st.cur = st.target; else moving = true;
+      const c = st.cur, p = through(POSES, c * c * (3 - 2 * c));
+      $('.abon-cards', sec).style.transform =
+        `translate3d(${p.x.toFixed(2)}px, ${p.y.toFixed(2)}px, 0) rotate(${p.r.toFixed(3)}deg) scale(${p.s.toFixed(4)})`;
+      // back layer: the block right above sinks away while the cards pass over it
+      const back = sec.previousElementSibling;
+      if (back && back.matches('.sec')) {
+        const q = easeInOut(clamp((c - .28) / .5)); // only once the cards are actually over it
+        back.style.transformOrigin = '50% 100%';
+        back.style.translate = `0 ${(q * 70).toFixed(1)}px`;
+        back.style.scale = (1 - q * .07).toFixed(4);
+        back.style.filter = q > .001 ? `brightness(${(1 - q * .45).toFixed(3)})` : '';
+      }
+    });
+    abonRaf = moving ? requestAnimationFrame(abonTick) : 0;
   }
 
   // hero: 0 → initial full-bleed stack, 1 → the whole stack scaled down a touch (see .deck-wrap)
@@ -847,8 +883,8 @@
 
       // season ticket: slow scroll through the pinned 3D sequence
       const ab = $('.screen[data-screen="home"] .sec-abon');
-      await scrollTo(home, yOf(home, ab, phone.clientHeight - 80), 900, id);
-      await scrollTo(home, yOf(home, ab, 250) + 560, 4200, id); await wait(900, id);
+      await scrollTo(home, yOf(home, ab, phone.clientHeight + 20), 800, id);
+      await scrollTo(home, yOf(home, ab, ABON_END), 3200, id); await wait(900, id);
 
       // teams → media → merch carousel
       await scrollTo(home, yOf(home, $('.sec-teams'), 70), 1400, id); await wait(1300, id);
