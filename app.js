@@ -100,7 +100,7 @@
         else if (vert && Math.abs(ddy) > 6 && Math.abs(ddy) > Math.abs(ddx)) mode = 'y';
         else if (!vert && Math.abs(ddy) > 6) { id = null; return; }
         else return;
-        el.setPointerCapture?.(e.pointerId); el.classList.add('is-dragging');
+        try { el.setPointerCapture?.(e.pointerId); } catch (_) {} el.classList.add('is-dragging');
       }
       dx = ddx; dy = ddy;
       const f = cards[order[0]];
@@ -796,225 +796,172 @@
     if (e.key === 'Escape') { if (storyOpen) closeStory(); else if (menuOpen) closeMenu(); }
     if (storyOpen && e.key === 'ArrowRight') showStory(storyIdx + 1);
     if (storyOpen && e.key === 'ArrowLeft') showStory(storyIdx - 1);
-    if ((e.key === 'd' || e.key === 'в') && !e.metaKey && !e.ctrlKey) demo.on ? demo.stop() : demo.start();
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = e.key.toLowerCase();
+    // same keys as concept 1 (also in the Russian layout); D still toggles the demo too
+    if (e.code === 'Space' || k === 'd' || k === 'в') { e.preventDefault(); demo.on ? demo.stop() : demo.start(); }
+    else if (k === 'c' || k === 'с') { demo.stop(); cartOpen ? closeCart() : openCart(); }
+    else if (k === 'm' || k === 'ь') { demo.stop(); menuOpen ? closeMenu() : openMenu(); }
+    else if (k === 'r' || k === 'к') { demo.stop(); resetAll(); }
   });
+  function resetAll() {
+    if (storyOpen) closeStory();
+    if (menuOpen) closeMenu();
+    closeCart();
+    if (currentTab !== 'home') selectTab('home');
+    $$('.scroller').forEach(sc => sc.scrollTo({ top: 0, behavior: 'smooth' }));
+  }
+  $('#bCart').addEventListener('click', () => { demo.stop(); cartOpen ? closeCart() : openCart(); });
+  $('#bMenu').addEventListener('click', () => { demo.stop(); menuOpen ? closeMenu() : openMenu(); });
+  $('#bReset').addEventListener('click', () => { demo.stop(); resetAll(); });
+  $('#hud').addEventListener('pointerup', () => setTimeout(() => document.activeElement && document.activeElement.blur(), 0));
 
-  /* ================= demo mode: an Apple-keynote-style presentation of every feature =================
-     Black stage, a title card, then the phone flies in. Each chapter brings a headline that resolves word by
-     word (blur → sharp), the light behind the phone shifts colour and place, and the phone slides like a
-     camera move. Inside, the app is driven for real: scrolls use a smootherstep curve (no jolt at start or
-     end), taps show a soft touch ring. Any real touch, the button or D stops it. */
+  /* ================= demo mode — same style as concept 1: a virtual finger walks through the app =================
+     The finger glides to a target, presses (dims + shrinks), releases; scrolls are finger drags with an
+     ease-in-out curve; swipes are real synthetic pointer events, so every effect reacts exactly as to a person.
+     Any real touch, the Демо/Стоп button, Space or D stops it. */
   const demo = (() => {
-    const btn = $('#demo-btn'), cam = $('#cam'), kn = $('#kn'), cap = $('#kn-cap'), bar = $('#kn-bar');
-    const intro = $('#kn-intro');
-    const dot = document.createElement('i'); dot.className = 'demo-touch'; phone.appendChild(dot);
-    fillLogos(kn);
-    let run = 0;
+    const btn = $('#demo-btn');
+    const finger = document.createElement('i'); finger.className = 'demo-finger'; phone.appendChild(finger);
+    let run = 0, on = false;
     const STOP = Symbol('stop');
     const alive = id => { if (id !== run) throw STOP; };
     const wait = (ms, id) => new Promise((res, rej) => setTimeout(() => (id === run ? res() : rej(STOP)), ms));
-    const yOf = (sc, el, off = 0) => el.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - off;
-    const smoother = t => t * t * t * (t * (t * 6 - 15) + 10);
-    const wide = () => innerWidth >= 900;
-    const scrollTo = (sc, y, ms, id) => new Promise((res, rej) => {
-      const y0 = sc.scrollTop, dy = Math.max(0, Math.min(y, sc.scrollHeight - sc.clientHeight)) - y0, t0 = performance.now();
-      const step = now => {
-        if (id !== run) return rej(STOP);
-        const t = Math.min((now - t0) / ms, 1);
-        sc.scrollTop = y0 + dy * smoother(t);
-        t < 1 ? requestAnimationFrame(step) : res();
-      };
-      requestAnimationFrame(step);
-    });
-    const touch = el => {
-      const pr = phone.getBoundingClientRect(), r = el.getBoundingClientRect();
-      dot.style.left = `${r.left + r.width / 2 - pr.left}px`; dot.style.top = `${r.top + r.height / 2 - pr.top}px`;
-      dot.classList.remove('ring'); dot.offsetWidth; dot.classList.add('ring');
-      dot.animate([
-        { opacity: 0, transform: 'translate(-50%,-50%) scale(1.5)' },
-        { opacity: 1, transform: 'translate(-50%,-50%) scale(1)', offset: .3 },
-        { opacity: 1, transform: 'translate(-50%,-50%) scale(.84)', offset: .5 },
-        { opacity: 0, transform: 'translate(-50%,-50%) scale(1.15)' },
-      ], { duration: 760, easing: 'cubic-bezier(.22,1,.36,1)' });
+    const bez = (() => { // cubic-bezier(.65,0,.35,1), as in concept 1
+      const f = (t, a, b) => 3 * (1 - t) * (1 - t) * t * a + 3 * (1 - t) * t * t * b + t * t * t;
+      return x => { let lo = 0, hi = 1, m; for (let i = 0; i < 24; i++) { m = (lo + hi) / 2; f(m, .65, .35) < x ? lo = m : hi = m; } return f((lo + hi) / 2, 0, 1); };
+    })();
+    const EASE_IO = 'cubic-bezier(.65,0,.35,1)';
+    const rel = el => { const pr = phone.getBoundingClientRect(), r = el.getBoundingClientRect(); return { x: r.left - pr.left, y: r.top - pr.top, w: r.width, h: r.height }; };
+    const W = () => phone.clientWidth, H = () => phone.clientHeight;
+    // ---- finger ----
+    let fp = null;
+    const fingerTo = (x, y, dur = 650) => {
+      const cur = fp || { x: W() / 2, y: H() - 110 };
+      finger.getAnimations().filter(a => a.id === 'mv').forEach(a => a.cancel());
+      const an = finger.animate([{ transform: `translate(${cur.x}px,${cur.y}px)` }, { transform: `translate(${x}px,${y}px)` }], { duration: dur, easing: EASE_IO, fill: 'forwards' });
+      an.id = 'mv'; fp = { x, y };
     };
-    const tap = async (el, id, before = 340) => { touch(el); await wait(before, id); el.click(); };
-
-    // ---- words ----
-    const words = (el, text) => {
-      el.innerHTML = text.split('\n').map(line => line.split(' ').map(w => `<span class="kn__w">${w} </span>`).join('')).join('<br>');
-      return $$('.kn__w', el);
-    };
-    const wordsIn = (ws, delay = 0, step = 55) => ws.forEach((w, i) => w.animate([
-      { opacity: 0, transform: 'translateY(.45em)', filter: 'blur(14px)' },
-      { opacity: 1, transform: 'none', filter: 'blur(0)' },
-    ], { duration: 900, delay: delay + i * step, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'backwards' }));
-    const fadeOut = (els, ms = 380) => Promise.all(els.map(e => e.animate([
-      { opacity: 1, transform: 'none', filter: 'blur(0)' },
-      { opacity: 0, transform: 'translateY(-.3em)', filter: 'blur(10px)' },
-    ], { duration: ms, easing: 'cubic-bezier(.4,0,.7,.2)', fill: 'forwards' }).finished.catch(() => {})));
-
-    // ---- chapters ----
-    const CH = [
-      { k: 'Главная', t: 'Главное —\nсразу.', s: 'Новости, интервью и мерч живой стопкой карточек. Листайте свайпом.', gx: '62%', gy: '18%', gc: '#c8102e' },
-      { k: 'Навигация', t: 'Стекло,\nкак в iOS.', s: 'Кнопки проявляются ровно тогда, когда они нужны.', gx: '70%', gy: '8%', gc: '#7a7a8c', gc2: '#1a1a2a' },
-      { k: 'Истории', t: 'День клуба\nза минуту.', s: 'Матч, интервью и закулисье — одним касанием.', gx: '58%', gy: '30%', gc: '#e0243f' },
-      { k: 'Матч', t: 'Ближайший\nматч.', s: 'Календарь, коэффициенты и билеты — в одной карточке.', gx: '66%', gy: '40%', gc: '#c8102e', gc2: '#ff6a13' },
-      { k: 'Билеты', t: 'Место —\nза секунды.', s: 'Корзина поднимается из глубины экрана и держит места 15 минут.', gx: '64%', gy: '72%', gc: '#a30d26' },
-      { k: 'Турнир', t: 'Таблица\nв реальном\nвремени.', s: 'РПЛ и Кубок России без перезагрузки.', gx: '56%', gy: '50%', gc: '#4b4b5c', gc2: '#c8102e' },
-      { k: 'Абонемент', t: 'Весь сезон.\nОдна карта.', s: 'Абонемент 2026/27 — РПЛ и Кубок России.', gx: '64%', gy: '42%', gc: '#ff1f3d', gc2: '#ffffff' },
-      { k: 'Медиа и мерч', t: 'Смотри.\nНоси.', s: 'Видео, новости и коллекция клуба.', gx: '60%', gy: '62%', gc: '#8c000a' },
-      { k: 'Меню', t: 'Весь клуб —\nв одном меню.', s: '22 раздела: от музея до VIP-лож.', gx: '66%', gy: '26%', gc: '#c8102e' },
-    ];
-    bar.innerHTML = CH.map(() => '<i><b></b></i>').join('');
-    let camX = 0;
-    const camTo = (x, ms = 1400, extra = '') => {
-      const from = getComputedStyle(cam).transform;
-      const to = `translateX(${x}px) ${extra}`.trim();
-      cam.animate([{ transform: from === 'none' ? 'none' : from }, { transform: to }], { duration: ms, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'forwards' });
-      camX = x;
-    };
-    async function chapter(i, dur, id) {
-      const c = CH[i];
-      const st = document.documentElement.style;
-      st.setProperty('--gx', c.gx); st.setProperty('--gy', c.gy); st.setProperty('--gc', c.gc); st.setProperty('--gc2', c.gc2 || '#3a0610');
-      $$('i', bar).forEach((b, k) => { b.className = k < i ? 'done' : ''; b.style.removeProperty('--dur'); });
-      const cur = $$('i', bar)[i]; cur.style.setProperty('--dur', dur + 'ms'); cur.offsetWidth; cur.className = 'run';
-      await fadeOut([...cap.children]); alive(id);
-      $('#kn-eyebrow').textContent = `${String(i + 1).padStart(2, '0')} · ${c.k}`;
-      const tw = words($('#kn-title'), c.t), sw = words($('#kn-sub'), c.s);
-      [...cap.children].forEach(e => e.getAnimations().forEach(a => a.cancel()));
-      cap.classList.add('is-on');
-      $('#kn-eyebrow').animate([{ opacity: 0, letterSpacing: '.4em' }, { opacity: 1, letterSpacing: '.14em' }], { duration: 900, easing: 'cubic-bezier(.16,1,.3,1)' });
-      wordsIn(tw, 80, 70); wordsIn(sw, 380 + tw.length * 40, 22);
-      if (wide()) camTo(Math.min(innerWidth * .17, 260));
+    const fingerSet = (x, y) => { finger.getAnimations().filter(a => a.id === 'mv').forEach(a => a.cancel()); finger.style.transform = `translate(${x}px,${y}px)`; fp = { x, y }; };
+    const show = v => { finger.style.opacity = v ? '1' : '0'; };
+    const down = v => { finger.classList.toggle('down', v); finger.animate([{ scale: v ? 1 : .82 }, { scale: v ? .82 : 1 }], { duration: 140, fill: 'forwards', easing: 'cubic-bezier(.22,1,.36,1)' }); };
+    const pe = (target, type, x, y) => target.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerType: 'touch', pointerId: 7, isPrimary: true, clientX: x, clientY: y }));
+    const client = (x, y) => { const pr = phone.getBoundingClientRect(); return [pr.left + x, pr.top + y]; };
+    // ---- gestures ----
+    async function tap(el, id, off = {}) {
+      const r = rel(el), x = r.x + r.w / 2 + (off.x || 0), y = r.y + r.h / 2 + (off.y || 0);
+      show(true); fingerTo(x, y, 700); await wait(760, id);
+      down(true); await wait(150, id); down(false);
+      el.click();
+      await wait(220, id); show(false);
     }
+    async function swipeX(el, id, dx = -170) {
+      const r = rel(el), x = r.x + r.w / 2 + 60, y = r.y + r.h * .42;
+      show(true); fingerTo(x, y, 600); await wait(650, id);
+      const [cx, cy] = client(x, y);
+      down(true); pe(el, 'pointerdown', cx, cy);
+      for (let i = 1; i <= 16; i++) {
+        const k = i / 16, nx = x + dx * (1 - Math.pow(1 - k, 2));
+        pe(window, 'pointermove', client(nx, y)[0], cy); fingerSet(nx, y);
+        await wait(16, id);
+      }
+      pe(window, 'pointerup', client(x + dx, y)[0], cy);
+      down(false); await wait(260, id); show(false);
+    }
+    // scroll a scroller to `to` while the finger drags across the screen (up for forward, down for back)
+    async function swipeScroll(sc, to, dur, id) {
+      to = Math.max(0, Math.min(sc.scrollHeight - sc.clientHeight, to));
+      const fwd = to > sc.scrollTop, x = W() / 2, y0 = fwd ? H() * .72 : H() * .36, y1 = fwd ? H() * .36 : H() * .72;
+      show(true); fingerTo(x, y0, 450); await wait(480, id);
+      down(true);
+      const from = sc.scrollTop, t0 = performance.now();
+      await new Promise((res, rej) => {
+        const step = now => {
+          if (id !== run) return rej(STOP);
+          const k = Math.min(1, (now - t0) / dur);
+          sc.scrollTop = from + (to - from) * bez(k);
+          fingerSet(x, y0 + (y1 - y0) * (1 - Math.pow(1 - k, 2)));
+          k < 1 ? requestAnimationFrame(step) : res();
+        };
+        requestAnimationFrame(step);
+      });
+      down(false); await wait(250, id); show(false);
+    }
+    const yOf = (sc, el, off = 0) => el.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - off;
 
     async function tour(id) {
       const home = $('#home-scroller');
-      if (storyOpen) closeStory();
-      if (menuOpen) closeMenu();
-      closeCart();
-      if (currentTab !== 'home') selectTab('home');
-      home.scrollTop = 0;
-      document.body.classList.add('keynote');
-      cap.classList.remove('is-on'); [...cap.children].forEach(e => e.animate([{ opacity: 0 }], { fill: 'forwards', duration: 1 }));
+      resetAll(); await wait(900, id);
+      home.scrollTop = 0; await wait(500, id);
 
-      // ---- title card ----
-      cam.getAnimations().forEach(a => a.cancel());
-      cam.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'perspective(1600px) translateY(160px) rotateX(24deg) scale(.82)' }],
-        { duration: 700, easing: 'cubic-bezier(.4,0,.7,.2)', fill: 'forwards' });
-      await wait(500, id);
-      intro.style.opacity = 1;
-      const bw = words($('#kn-big'), 'Спартак.'), lw = words($('#kn-lead'), 'Клуб, который всегда с тобой.');
-      $('.kn__logo').animate([{ opacity: 0, transform: 'scale(1.9)', filter: 'blur(16px)' }, { opacity: 1, transform: 'scale(1.4)', filter: 'blur(0)' }], { duration: 1100, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'backwards' });
-      wordsIn(bw, 250, 90); wordsIn(lw, 750, 45);
-      await wait(2700, id);
-      await fadeOut([...intro.children], 600); alive(id);
-      intro.style.opacity = 0; [...intro.children].forEach(e => e.getAnimations().forEach(a => a.cancel()));
+      // hero: swipe through the stacked slides
+      for (let i = 0; i < 2; i++) { await swipeX(heroDeck.cards[heroDeck.index], id); await wait(1100, id); }
 
-      // ---- the phone flies in ----
-      const x = wide() ? Math.min(innerWidth * .17, 260) : 0;
-      cam.animate([
-        { opacity: 0, transform: 'perspective(1600px) translateY(220px) rotateX(28deg) scale(.78)' },
-        { opacity: 1, transform: `perspective(1600px) translateX(${x * .5}px) translateY(0) rotateX(-4deg) scale(1.02)`, offset: .7 },
-        { opacity: 1, transform: `translateX(${x}px)` },
-      ], { duration: 1600, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'forwards' });
-      camX = x;
-      await wait(900, id);
+      // a short scroll — the glass header buttons appear
+      await swipeScroll(home, 180, 900, id); await wait(900, id);
 
-      // 01 hero
-      await chapter(0, 6200, id); await wait(1100, id);
-      for (let i = 0; i < 3; i++) { touch(heroDeck.cards[heroDeck.index]); await wait(200, id); heroDeck.next('x'); await wait(1300, id); }
+      // stories: open, next, close
+      await swipeScroll(home, yOf(home, $('#stories'), 330), 900, id); await wait(300, id);
+      await tap($('.st', storiesEl), id); await wait(2200, id);
+      await tap($('.story__nav i:last-child'), id, { y: -120 }); await wait(2000, id);
+      await tap($('.story .glass-x'), id); await wait(800, id);
 
-      // 02 glass header
-      await chapter(1, 3600, id);
-      await scrollTo(home, 180, 1300, id); await wait(1900, id);
-
-      // 03 stories
-      await chapter(2, 6200, id);
-      await scrollTo(home, yOf(home, $('#stories'), 330), 1000, id); await wait(300, id);
-      const st = $('.st', storiesEl); touch(st); await wait(300, id); openStory(0, st);
-      await wait(2200, id); touch($('.story__nav i:last-child')); showStory(1); await wait(2000, id); closeStory(); await wait(800, id);
-
-      // 04 match
+      // match: add to calendar, pick odds, swipe the stack, buy → cart rises from below
       const ms = $('.screen[data-screen="home"] .sec-match');
-      await chapter(3, 6400, id);
-      await scrollTo(home, yOf(home, ms, 170), 1200, id); await wait(300, id);
       const front = () => $('.mcard[data-pos="0"]', ms);
-      await tap($('.cal-btn', front()), id); await wait(1500, id);
-      await tap($$('.odd', front())[0], id); await wait(900, id);
-      for (let i = 0; i < 2; i++) { touch(front()); await wait(200, id); ms._deck.next('x'); await wait(1150, id); }
+      await swipeScroll(home, yOf(home, ms, 170), 1000, id); await wait(300, id);
+      await tap($('.cal-btn', front()), id); await wait(1300, id);
+      await tap($$('.odd', front())[0], id); await wait(700, id);
+      await swipeX(front(), id); await wait(1100, id);
+      await swipeX(front(), id); await wait(1100, id);
+      await tap($('.btn-red', front()), id); await wait(2200, id);
 
-      // 05 tickets → the cart rises from below the content
-      await chapter(4, 3800, id);
-      await tap($('.btn-red', front()), id); await wait(3200, id);
-
-      // 06 table
+      // table: switch competition and back
       const tb = $('.screen[data-screen="home"] [data-block="table"]');
-      closeCart();
-      await chapter(5, 4600, id);
-      await scrollTo(home, yOf(home, tb, 90), 1200, id); await wait(300, id);
-      await tap($('.seg__btn[data-seg-i="1"]', tb), id); await wait(1300, id);
-      await tap($('.seg__btn[data-seg-i="0"]', tb), id); await wait(1300, id);
+      await swipeScroll(home, yOf(home, tb, 90), 1000, id); await wait(300, id);
+      await tap($('.seg__btn[data-seg-i="1"]', tb), id); await wait(1200, id);
+      await tap($('.seg__btn[data-seg-i="0"]', tb), id); await wait(1000, id);
 
-      // 07 season ticket — one continuous, unhurried scroll through the 3D card sequence
+      // season ticket: one slow drag through the 3D card sequence
       const ab = $('.screen[data-screen="home"] .sec-abon');
-      await chapter(6, 5600, id);
-      await scrollTo(home, yOf(home, $('.abon-pin', ab), ABON_END), 4200, id); await wait(1300, id);
+      await swipeScroll(home, yOf(home, $('.abon-pin', ab), ABON_END), 3400, id); await wait(1100, id);
 
-      // 08 media & merch
-      await chapter(7, 6200, id);
-      await scrollTo(home, yOf(home, $('.sec-media'), 70), 1600, id); await wait(1200, id);
+      // teams → media → merch carousel → to the end and back
+      await swipeScroll(home, yOf(home, $('.sec-media'), 70), 1500, id); await wait(900, id);
       const merch = $('.screen[data-screen="home"] .merch');
-      await scrollTo(home, yOf(home, merch.closest('.sec'), 90), 1400, id); await wait(300, id);
-      await new Promise(r => { merch.scrollTo({ left: 220, behavior: 'smooth' }); setTimeout(r, 1100); }); alive(id);
-      merch.scrollTo({ left: 0, behavior: 'smooth' }); await wait(900, id);
+      await swipeScroll(home, yOf(home, merch.closest('.sec'), 90), 1200, id); await wait(300, id);
+      await new Promise(r => { merch.scrollTo({ left: 220, behavior: 'smooth' }); setTimeout(r, 1000); }); alive(id);
+      merch.scrollTo({ left: 0, behavior: 'smooth' }); await wait(800, id);
+      await swipeScroll(home, home.scrollHeight, 1400, id); await wait(700, id);
+      await swipeScroll(home, 260, 2200, id); await wait(500, id);
 
-      // 09 menu
-      await chapter(8, 5600, id);
-      await tap($('#hbar [data-action="open-menu"]'), id); await wait(1500, id);
-      await scrollTo(mScroller, 520, 1600, id); await wait(700, id);
-      await scrollTo(mScroller, 0, 1000, id); await wait(300, id);
-      await tap($('.sheet .glass-x'), id); await wait(800, id);
+      // menu sheet: open, scroll, close
+      await tap($('#hbar [data-action="open-menu"]'), id); await wait(1300, id);
+      await swipeScroll(mScroller, 520, 1500, id); await wait(500, id);
+      await swipeScroll(mScroller, 0, 1000, id); await wait(300, id);
+      await tap($('.sheet .glass-x'), id); await wait(900, id);
 
-      // ---- finale: back to the top, phone to centre, closing line ----
-      $$('i', bar).forEach(b => { b.className = 'done'; });
-      await fadeOut([...cap.children]); alive(id); cap.classList.remove('is-on');
-      closeCart();
-      await scrollTo(home, 0, 2000, id);
-      cam.animate([{ transform: `translateX(${camX}px)` }, { transform: 'perspective(1600px) translateZ(-120px) scale(.94)' }], { duration: 1400, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'forwards' });
-      if (wide()) {
-        intro.style.opacity = 1;
-        $('.kn__logo').style.display = 'none';
-        intro.style.alignContent = 'end'; intro.style.paddingBottom = '7vh';
-        const fw = words($('#kn-big'), ''), fl = words($('#kn-lead'), 'Красно-белые. Всегда. Скоро в App Store.');
-        wordsIn(fl, 300, 70);
-      }
-      await wait(3600, id);
+      // dismiss the cart and go back to the top
+      if (cartOpen) { closeCart(); await wait(900, id); }
+      await swipeScroll(home, 0, 1600, id); await wait(400, id);
       stop();
     }
-    function reset() {
-      document.body.classList.remove('keynote');
-      cam.getAnimations().forEach(a => a.cancel());
-      cap.classList.remove('is-on');
-      [...cap.children, ...intro.children].forEach(e => { e.getAnimations().forEach(a => a.cancel()); if (!e.classList.contains('kn__logo')) e.textContent = ''; });
-      intro.style.opacity = 0; intro.style.alignContent = ''; intro.style.paddingBottom = ''; $('.kn__logo').style.display = '';
-      $$('i', bar).forEach(b => { b.className = ''; });
-      camX = 0;
-    }
+    const setBtn = v => { if (!btn) return; btn.querySelector('span').textContent = v ? 'Стоп' : 'Демо'; btn.classList.toggle('on', v); btn.classList.toggle('primary', !v); };
     function start() {
-      const id = ++run;
-      phone.classList.add('demo'); btn && btn.classList.add('is-on');
+      const id = ++run; on = true;
+      phone.classList.add('demo'); setBtn(true);
       tour(id).catch(e => { if (e !== STOP) { console.error(e); stop(); } });
     }
     function stop() {
-      run++;
-      phone.classList.remove('demo'); btn && btn.classList.remove('is-on');
-      reset();
+      if (!on) return;
+      run++; on = false;
+      phone.classList.remove('demo'); setBtn(false);
+      show(false); finger.classList.remove('down');
     }
-    btn && btn.addEventListener('click', () => (phone.classList.contains('demo') ? stop() : start()));
-    phone.addEventListener('pointerdown', e => { if (e.isTrusted && phone.classList.contains('demo')) stop(); }, true);
-    if (/[?&]demo\b/.test(location.search)) setTimeout(start, 1800);
-    return { start, stop, get on() { return phone.classList.contains('demo'); } };
+    btn && btn.addEventListener('click', () => (on ? stop() : start()));
+    // any real touch hands control back to the user
+    phone.addEventListener('pointerdown', e => { if (e.isTrusted && on) stop(); }, true);
+    if (/[?&]demo\b/.test(location.search) && !document.documentElement.classList.contains('mobile')) setTimeout(start, 1800);
+    return { start, stop, get on() { return on; } };
   })();
 })();

@@ -2,23 +2,23 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Спартак — приложение</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Спартак">
+<meta name="theme-color" content="#16161b">
+<!-- mode as in concept 1: touch screens < 760px (or ?mobile) get the bare app, ?desktop forces the stage -->
+<script>(function(){var q=new URLSearchParams(location.search);var m=q.has('mobile')||(!q.has('desktop')&&matchMedia('(pointer: coarse)').matches&&Math.min(screen.width||innerWidth,innerWidth)<760);if(m)document.documentElement.classList.add('mobile');})();</script>
+<link rel="stylesheet" href="concept-1/assets/fonts.css">
+<title>Спартак · iOS-app · v2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=19">
+<link rel="stylesheet" href="styles.css?v=24">
 </head>
 <body>
-<!-- ============ KEYNOTE LAYER (demo mode) ============ -->
-<div class="kn" id="kn" aria-live="polite">
-  <div class="kn__glow"><i></i><i></i></div>
-  <div class="kn__intro" id="kn-intro"><span class="logo-sp kn__logo" data-logo="spartak"></span><h1 class="kn__big" id="kn-big"></h1><p class="kn__lead" id="kn-lead"></p></div>
-  <div class="kn__cap" id="kn-cap"><p class="kn__eyebrow" id="kn-eyebrow"></p><h2 class="kn__title" id="kn-title"></h2><p class="kn__sub" id="kn-sub"></p></div>
-  <div class="kn__bar" id="kn-bar"></div>
-</div>
 <div class="stage">
-  <button class="demo-btn" id="demo-btn" type="button"><span class="demo-btn__play"></span><b>Демо</b><i>Стоп</i></button>
   <div class="cam" id="cam">
   <div class="phone" id="phone">
 
@@ -333,8 +333,17 @@
   </div>
   </div><!-- /cam -->
 </div>
+<!-- presentation controls, same as concept 1 -->
+<div class="hud-hint" id="hint">Пробел — демо · <kbd>C</kbd> корзина · <kbd>M</kbd> меню · <kbd>R</kbd> сброс</div>
+<div class="hud" id="hud">
+  <button class="primary" id="demo-btn"><svg viewBox="0 0 14 14"><path d="M3 1.6v10.8a.6.6 0 0 0 .9.5l8.6-5.4a.6.6 0 0 0 0-1L3.9 1.1a.6.6 0 0 0-.9.5z"/></svg><span>Демо</span></button>
+  <button id="bCart">Корзина</button>
+  <button id="bMenu">Меню</button>
+  <button id="bReset">Сброс</button>
+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-<script src="app.js?v=19"></script>
+<script src="app.js?v=24"></script>
+<script src="switcher/switcher.js" data-current="2" data-c1="concept-1/index.html" data-c2="index.html" data-lift-el="#app" data-lift-when=".has-cart"></script>
 </body>
 </html>

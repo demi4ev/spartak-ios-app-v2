@@ -1,0 +1,32 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="59.7746" height="16.6648" viewBox="0 0 59.7746 16.6648" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Group 12">
+<g id="Vector">
+<path d="M45.8873 2.33238L35.8873 8.33238L45.8873 14.3324L55.8873 8.33238L45.8873 2.33238Z" fill="#52525D"/>
+<mask id="stroke0_0_23" maskUnits="userSpaceOnUse" x="31.8873" y="-0.667619" width="28" height="18" fill="black">
+<rect fill="white" x="31.8873" y="-0.667619" width="28" height="18"/>
+<path d="M45.8873 2.33238L35.8873 8.33238L45.8873 14.3324L55.8873 8.33238L45.8873 2.33238Z"/>
+</mask>
+<path d="M45.8873 2.33238L35.8873 8.33238L45.8873 14.3324L55.8873 8.33238L45.8873 2.33238Z" stroke-width="4" stroke="#1C1A1C" mask="url(#stroke0_0_23)"/>
+</g>
+<g id="Vector_2">
+<path d="M29.8873 2.33238L19.8873 8.33238L29.8873 14.3324L39.8873 8.33238L29.8873 2.33238Z" fill="#52525D"/>
+<mask id="stroke1_0_23" maskUnits="userSpaceOnUse" x="15.8873" y="-0.667619" width="28" height="18" fill="black">
+<rect fill="white" x="15.8873" y="-0.667619" width="28" height="18"/>
+<path d="M29.8873 2.33238L19.8873 8.33238L29.8873 14.3324L39.8873 8.33238L29.8873 2.33238Z"/>
+</mask>
+<path d="M29.8873 2.33238L19.8873 8.33238L29.8873 14.3324L39.8873 8.33238L29.8873 2.33238Z" stroke-width="4" stroke="#1C1A1C" mask="url(#stroke1_0_23)"/>
+</g>
+<mask id="stroke2_0_23" maskUnits="userSpaceOnUse" x="-0.112699" y="-0.667619" width="28" height="18" fill="black">
+<rect fill="white" x="-0.112699" y="-0.667619" width="28" height="18"/>
+<path d="M13.8873 2.33238L3.8873 8.33238L13.8873 14.3324L23.8873 8.33238L13.8873 2.33238Z"/>
+</mask>
+<path id="Vector_3" d="M13.8873 2.33238L3.8873 8.33238L13.8873 14.3324L23.8873 8.33238L13.8873 2.33238Z" stroke-width="4" stroke="#1A1213" mask="url(#stroke2_0_23)"/>
+<g id="Vector_4">
+<path d="M13.8873 2.33238L3.8873 8.33238L13.8873 14.3324L23.8873 8.33238L13.8873 2.33238Z" fill="#C8102E"/>
+<mask id="stroke3_0_23" fill="white">
+<path d="M13.8873 2.33238L3.8873 8.33238L13.8873 14.3324L23.8873 8.33238L13.8873 2.33238Z"/>
+</mask>
+<path d="M13.8873 2.33238L3.8873 8.33238L13.8873 14.3324L23.8873 8.33238L13.8873 2.33238Z" stroke-width="4" stroke="#C8102E" mask="url(#stroke3_0_23)"/>
+</g>
+</g>
+</svg>
