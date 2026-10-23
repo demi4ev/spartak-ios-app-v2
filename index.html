@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=25">
+<link rel="stylesheet" href="styles.css?v=32">
 </head>
 <body>
 <div class="stage">
@@ -23,6 +23,8 @@
   <div class="phone" id="phone">
 
     <div class="app" id="app">
+    <!-- ambient backdrop (Apple Sports-like): a red-black glow behind every screen that slowly takes on the colours of what is on screen -->
+    <div class="ambient" id="ambient" aria-hidden="true"><i class="amb amb--1"></i><i class="amb amb--2"></i><i class="amb amb--3"></i><i class="amb-veil"></i></div>
     <!-- ============ SCREENS ============ -->
     <div class="screens">
 
@@ -30,28 +32,35 @@
       <div class="screen is-active" data-screen="home">
         <div class="scroller" id="home-scroller">
           <div class="content">
-            <img class="glow glow--top" src="assets/glow-top.svg" width="1018" height="622" alt="">
 
-            <!-- Hero deck -->
-            <section class="hero" id="hero">
+            <!-- Hero deck: edge to edge at the top, sized so the cards behind and the pagination fit on the first screen;
+                 settles into the inset stack on scroll (Figma 4057:11751 → 4088:3834) -->
+            <section class="hero" id="hero" data-amb="hero">
+              <span class="dpag dpag--hero" id="hero-dpag"><i></i><i></i><i></i></span>
               <div class="deck-wrap" id="deck-wrap">
                 <div class="deck deck--hero" id="deck"></div>
                 <div class="hero-logo"><span class="logo-sp" data-logo="spartak"></span></div>
               </div>
-              <div class="vpag" id="hero-pag"><i></i></div>
             </section>
 
             <!-- Stories -->
             <section class="stories hscroll" id="stories"></section>
 
-            <!-- Match -->
-            <section class="sec sec-match pop" data-block="match">
-              <div class="deck deck--match"></div>
+            <!-- Slogan (Figma 4101:6033): kinetic type that stretches with the scroll -->
+            <section class="slogan" id="slogan" data-amb="slogan">
+              <img class="slogan__ico" src="assets/slogan-icon.svg" width="48" height="48" alt="">
+              <h2 class="slogan__t" id="slogan-t" aria-label="Чтите традиции, играйте для страсти."><span class="sl-line">Чтите традиции,</span> <em class="sl-line">играйте для</em> <em class="sl-line">страсти.</em></h2>
+            </section>
+
+            <!-- Match: tickets fan out from behind the main one (Figma 4088:3996) -->
+            <section class="sec sec-match" data-block="match" data-amb="match">
+              <div class="tix"></div>
+              <span class="dpag dpag--match"><i></i><i></i><i></i></span>
             </section>
 
             <!-- Table -->
-            <section class="sec pop" data-block="table">
-              <div class="card card--pad">
+            <section class="sec pop" data-block="table" data-amb="table">
+              <div class="card card--pad card--light">
                 <div class="label">
                   <h2 class="h-display">Турнирная<br><em>таблица</em></h2>
                   <button class="more tap">Вся таблица <img src="assets/arrow-table.svg" width="16" height="16" alt=""></button>
@@ -74,7 +83,7 @@
             </section>
 
             <!-- Season ticket: pinned, cards morph from flat to isometric -->
-            <section class="sec-abon" data-block="abon">
+            <section class="sec-abon" data-block="abon" data-amb="abon">
               <div class="abon-pin">
                 <div class="abon">
                   <div class="abon__bg"></div>
@@ -91,90 +100,87 @@
               </div>
             </section>
 
-            <!-- Teams -->
-            <section class="sec sec-teams">
-              <div class="label rv">
+            <!-- Teams (Figma 4043:5526): the block pins on screen; scrolling walks through the teams, one card open
+                 at a time (main squad by default), a tap opens any of them -->
+            <div class="teams-pin" id="teams-pin"><div class="teams-stick" id="teams-stick">
+            <section class="sec sec-teams" data-amb="teams">
+              <div class="label">
                 <h2 class="h-display">Команды<br><em>клуба</em></h2>
                 <button class="more tap">Все команды <img src="assets/arrow-teams.svg" width="16" height="16" alt=""></button>
               </div>
-              <div class="teams">
-                <button class="tile rv tap" style="--d:0"><img src="assets/team-1.svg" width="48" height="48" alt=""><b>Основной состав</b><span>РПЛ · Кубок России</span></button>
-                <button class="tile rv tap" style="--d:1"><img src="assets/team-2.svg" width="48" height="48" alt=""><b>ЖФК «Спартак»</b><span>Женская суперлига</span></button>
-                <button class="tile rv tap" style="--d:2"><img src="assets/team-3.svg" width="48" height="48" alt=""><b>Академия</b><span>Юношеские первенства</span></button>
-                <button class="tile rv tap" style="--d:3"><img src="assets/team-4.svg" width="48" height="48" alt=""><b>Молодёжная</b><span>Молодёжное первенство</span></button>
-              </div>
+              <div class="tcards" id="tcards"></div>
             </section>
+            </div></div>
 
             <!-- Bet banner -->
             <section class="sec-bet pop">
               <button class="bet tap"><img src="assets/bet-banner.webp" width="390" height="67" alt="Winline Bet Race · Фрибет"></button>
             </section>
 
-            <!-- Media -->
-            <section class="sec-media pop" data-block="media">
+            <!-- Media (Figma 4043:5580): light block, white cards -->
+            <section class="sec-media pop" data-block="media" data-amb="media">
               <div class="media">
                 <div class="label">
                   <h2 class="h-display">Медиа</h2>
                   <button class="more tap">Всё медиа <img src="assets/arrow-media.svg" width="16" height="16" alt=""></button>
                 </div>
                 <div class="media__list">
-                  <article class="news-big tap-soft rv" style="--d:0">
-                    <div class="news-big__img"><img src="assets/media-1.webp" alt=""></div>
-                    <h3>Спартаковцы в сборных. Кто с кем сыграет в эту паузу</h3>
-                    <p class="t-meta">19 сентября 10:30 · Новости</p>
+                  <article class="mbig tap-soft rv" style="--d:0">
+                    <div class="mbig__img"><img src="assets/media-1.webp" alt=""></div>
+                    <div class="mbig__txt"><h3>Спартаковцы в сборных. Кто с кем сыграет в эту паузу</h3><p class="meta"><span>19 сентября 10:30</span><span>·</span><span>Новости</span></p></div>
                   </article>
-                  <article class="news tap-soft rv" style="--d:1">
-                    <div class="news__img is-video"><img src="assets/media-2.webp" alt="" style="height:126.22%;top:-24.55%"><i class="play"></i><span class="dur">11:19</span></div>
-                    <div><h4>Как «Спартак» обыграл «Факел» на 91-й минуте 🎬</h4><p class="t-meta">18 сентября 16:27 · Матчдэй</p></div>
+                  <article class="mrow tap-soft rv" style="--d:1">
+                    <div class="mrow__img is-video"><img src="assets/media-2.webp" alt=""><i class="play"></i><span class="dur">11:19</span></div>
+                    <div class="mrow__txt"><h4>Как «Спартак» обыграл «Факел» на 91-й минуте 🎬</h4><p class="meta"><span>18 сентября 16:27</span><span>·</span><span>Матчдэй</span></p></div>
                   </article>
-                  <article class="news tap-soft rv" style="--d:2">
-                    <div class="news__img"><img src="assets/media-3.webp" alt="" style="height:126.81%;top:-7.25%;left:-0.85%;width:100.85%"></div>
-                    <div><h4>Карседо: «Важно было завершить этот отрезок победой»</h4><p class="t-meta">16 сентября 22:11 · Новости</p></div>
+                  <article class="mrow tap-soft rv" style="--d:2">
+                    <div class="mrow__img"><img src="assets/media-3.webp" alt=""></div>
+                    <div class="mrow__txt"><h4>Карседо: «Важно было завершить этот отрезок победой»</h4><p class="meta"><span>16 сентября 22:11</span><span>·</span><span>Новости</span></p></div>
                   </article>
-                  <article class="news tap-soft rv" style="--d:3">
-                    <div class="news__img"><img src="assets/media-4.webp" alt="" class="cover"></div>
-                    <div><h4>Угальде принес победу над «Факелом» на 91-й минуте!</h4><p class="t-meta">16 сентября 20:37 · Новости</p></div>
+                  <article class="mrow tap-soft rv" style="--d:3">
+                    <div class="mrow__img"><img src="assets/media-4.webp" alt=""></div>
+                    <div class="mrow__txt"><h4>Угальде принес победу над «Факелом» на 91-й минуте!</h4><p class="meta"><span>16 сентября 20:37</span><span>·</span><span>Новости</span></p></div>
                   </article>
-                  <article class="news tap-soft rv" style="--d:4">
-                    <div class="news__img is-video"><img src="assets/media-5.webp" alt="" style="height:126.22%;top:-24.55%"><i class="play"></i><span class="dur">59:42</span></div>
-                    <div><h4>БАБИЧ: Видич, травма, братство России и Сербии 🎬</h4><p class="t-meta">04 сентября 13:24 · Видео</p></div>
+                  <article class="mrow tap-soft rv" style="--d:4">
+                    <div class="mrow__img is-video"><img src="assets/media-5.webp" alt=""><i class="play"></i><span class="dur">59:42</span></div>
+                    <div class="mrow__txt"><h4>БАБИЧ: Видич, травма, братство России и Сербии 🎬</h4><p class="meta"><span>04 сентября 13:24</span><span>·</span><span>Видео</span></p></div>
                   </article>
                 </div>
               </div>
             </section>
 
-            <!-- Merch -->
-            <section class="sec pop" data-block="merch">
-              <div class="card card--pad card--merch">
-                <div class="label">
-                  <h2 class="h-display">Популярный<br><em>мерч</em></h2>
-                  <button class="more tap">Каталог <img src="assets/arrow-merch.svg" width="16" height="16" alt=""></button>
-                </div>
-                <div class="merch hscroll">
+            <!-- Merch (Figma 4043:5641): dark cards, pages of two that snap -->
+            <section class="sec sec-merch" data-block="merch" data-amb="merch">
+              <div class="label">
+                <h2 class="h-display">Популярный<br><em>мерч</em></h2>
+                <button class="more more--white tap">Каталог <img src="assets/arrow-merch.svg" width="16" height="16" alt=""></button>
+              </div>
+              <div class="merch" data-merch>
                   <article class="prod tap-soft">
-                    <div class="prod__img"><img src="assets/merch-1.webp" alt=""><span class="badge badge--hit">Хит</span></div>
-                    <p class="prod__rate"><img src="assets/icon-star.svg" width="12" height="12" alt="">4.7 <i>·</i> <s>13 оценок</s></p>
-                    <p class="prod__name">Джерси JOGEL «Спартак» игровая домашняя — сезон 26/27</p>
-                    <p class="prod__price">6 990 ₽</p>
+                    <div class="prod__img"><img src="assets/merch-4.webp" alt=""><span class="badge badge--new">New</span><button class="prod__add tap" data-action="add" aria-label="В корзину"><img src="assets/icon-plus.svg" width="16" height="16" alt=""></button></div>
+                    <div class="prod__info"><p class="prod__row"><b>17 999 ₽</b><img src="assets/icon-star.svg" width="12" height="12" alt=""><b>4.4</b></p><p class="prod__name">Пуховик «СПАРТАК» × FINN FLARE водоотталкивающий красный</p></div>
                   </article>
                   <article class="prod tap-soft">
-                    <div class="prod__img"><img src="assets/merch-2.webp" alt=""></div>
-                    <p class="prod__rate"><img src="assets/icon-star.svg" width="12" height="12" alt="">4.9 <i>·</i> <s>84 оценки</s></p>
-                    <p class="prod__name">Ретро джерси «СПАРТАК» AKAI 1997</p>
-                    <p class="prod__price">5 990 ₽</p>
+                    <div class="prod__img"><img src="assets/merch-2.webp" alt=""><button class="prod__add tap" data-action="add" aria-label="В корзину"><img src="assets/icon-plus.svg" width="16" height="16" alt=""></button></div>
+                    <div class="prod__info"><p class="prod__row"><b>5 990 ₽</b><img src="assets/icon-star.svg" width="12" height="12" alt=""><b>4.9</b></p><p class="prod__name">Ретро джерси «СПАРТАК» AKAI сезон 1997</p></div>
                   </article>
                   <article class="prod tap-soft">
-                    <div class="prod__img"><img src="assets/merch-3.webp" alt=""><span class="badge badge--new">New</span></div>
-                    <p class="prod__rate"><img src="assets/icon-star.svg" width="12" height="12" alt="">4.4 <i>·</i> <s>2 оценки</s></p>
-                    <p class="prod__name">Кепка ATRIBUTIKA&amp;CLUB</p>
-                    <p class="prod__price">2 190 ₽</p>
+                    <div class="prod__img"><img src="assets/merch-1.webp" alt=""><span class="badge badge--hit">Хит</span><button class="prod__add tap" data-action="add" aria-label="В корзину"><img src="assets/icon-plus.svg" width="16" height="16" alt=""></button></div>
+                    <div class="prod__info"><p class="prod__row"><b>6 990 ₽</b><img src="assets/icon-star.svg" width="12" height="12" alt=""><b>4.7</b></p><p class="prod__name">Джерси JOGEL «Спартак» игровая домашняя сезон 26/27</p></div>
                   </article>
-                </div>
+                  <article class="prod tap-soft">
+                    <div class="prod__img"><img src="assets/merch-5.webp" alt=""><span class="badge badge--hit">Хит</span><button class="prod__add tap" data-action="add" aria-label="В корзину"><img src="assets/icon-plus.svg" width="16" height="16" alt=""></button></div>
+                    <div class="prod__info"><p class="prod__row"><b>6 990 ₽</b><img src="assets/icon-star.svg" width="12" height="12" alt=""><b>4.7</b></p><p class="prod__name">Футболка JOGEL игровая Н.П. Симонян 100 лет</p></div>
+                  </article>
+                  <article class="prod tap-soft">
+                    <div class="prod__img"><img src="assets/merch-6.webp" alt=""><span class="badge badge--hit">Хит</span><button class="prod__add tap" data-action="add" aria-label="В корзину"><img src="assets/icon-plus.svg" width="16" height="16" alt=""></button></div>
+                    <div class="prod__info"><p class="prod__row"><b>1 599 ₽</b><img src="assets/icon-star.svg" width="12" height="12" alt=""><b>4.7</b></p><p class="prod__name">Кепка JOGEL красная</p></div>
+                  </article>
               </div>
             </section>
 
             <!-- All sections -->
-            <section class="sec pop">
+            <section class="sec pop" data-amb="all">
               <div class="card card--all">
                 <h2 class="h-display">Все разделы<br><em>клуба</em></h2>
                 <p class="t-small">22 раздела: музей, VIP-ложи, ветераны, медиа</p>
@@ -192,12 +198,18 @@
                 <img class="tr tr5" src="assets/trophy-5.svg" alt="">
               </div>
             </section>
+
+            <!-- Sponsors (Figma 4097:4351): the general sponsor always on, partners scroll by three with a pause -->
+            <section class="sponsors">
+              <img class="sponsors__main" src="assets/lukoil.svg" width="227" height="45" alt="ЛУКОЙЛ">
+              <div class="sponsors__vp"><div class="sponsors__row" id="sponsors-row"><img src="assets/sponsor-1.webp" width="90" height="45" alt=""><img src="assets/sponsor-2.webp" width="90" height="45" alt=""><img src="assets/sponsor-3.webp" width="90" height="45" alt=""><img src="assets/sponsor-4.webp" width="90" height="45" alt=""><img src="assets/sponsor-5.webp" width="90" height="45" alt=""><img src="assets/sponsor-6.webp" width="90" height="45" alt=""><img src="assets/sponsor-7.webp" width="90" height="45" alt=""><img src="assets/sponsor-8.webp" width="90" height="45" alt=""><img src="assets/sponsor-9.webp" width="90" height="45" alt=""></div></div>
+            </section>
           </div>
         </div>
       </div>
 
       <!-- Other tabs are assembled from home blocks in app.js -->
-      <div class="screen" data-screen="matches"><div class="scroller"><div class="content content--tab"><h1 class="big-title">Матчи</h1><div data-slot="match"></div><div data-slot="table"></div></div></div></div>
+      <div class="screen" data-screen="matches"><div class="scroller"><div class="content content--tab"><h1 class="big-title">Игры</h1><div data-slot="match"></div><div data-slot="table"></div></div></div></div>
       <div class="screen" data-screen="tickets"><div class="scroller"><div class="content content--tab"><h1 class="big-title">Билеты</h1><div data-slot="match"></div><div data-slot="abon"></div></div></div></div>
       <div class="screen" data-screen="shop"><div class="scroller"><div class="content content--tab"><h1 class="big-title">Магазин</h1><div data-slot="merch"></div></div></div></div>
       <div class="screen" data-screen="login"><div class="scroller"><div class="content content--tab content--login">
@@ -209,18 +221,19 @@
     </div>
 
     <div class="edge-top" id="edge-top"><div class="pblur"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+    <!-- stories pinned to the top once the row has scrolled away (Telegram-style stack between the header buttons) -->
+    <button class="stpin tap" id="stpin" aria-label="Истории"><span class="stpin__stack" id="stpin-stack"></span></button>
     <div class="hbar" id="hbar">
       <div class="hbtn hbtn--search">
         <span class="hbtn__glass"></span>
-        <button class="hbtn__b" aria-label="Поиск"><img src="assets/icon-search.svg" width="24" height="24" alt=""></button>
+        <button class="hbtn__b" aria-label="Поиск"><img src="assets/icon-search.svg?v=2" width="24" height="24" alt=""></button>
       </div>
       <div class="hbtn hbtn--group">
         <span class="hbtn__glass"></span>
-        <button class="hbtn__b" aria-label="Уведомления"><img src="assets/icon-bell.svg" width="24" height="24" alt=""></button>
-        <button class="hbtn__b" data-action="open-menu" aria-label="Меню"><img src="assets/icon-menu.svg" width="24" height="24" alt=""></button>
+        <button class="hbtn__b" aria-label="Уведомления"><img src="assets/icon-bell.svg?v=2" width="24" height="24" alt=""></button>
+        <button class="hbtn__b" data-action="open-menu" aria-label="Меню"><img src="assets/icon-menu.svg?v=2" width="24" height="24" alt=""></button>
       </div>
     </div>
-    <div class="vpag vpag--float" id="mpag"><i></i></div>
     <!-- Cart bar (Figma main 4059:14035 → Frame 40): slides up from the bottom, lifting the tab bar -->
     <div class="cart" id="cart" aria-hidden="true">
       <div class="cart__bg"></div>
@@ -239,11 +252,11 @@
       <div class="tabbar__fade"><div class="pblur"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
       <nav class="tabs" id="tabs">
         <span class="tabs__pill" id="tabs-pill"></span>
-        <button class="tab is-on" data-tab="home"><img src="assets/tab-home-active.svg" width="24" height="24" alt=""><span>Главная</span></button>
-        <button class="tab" data-tab="matches"><img src="assets/tab-matches.svg" width="24" height="24" alt=""><span>Матчи</span></button>
-        <button class="tab" data-tab="tickets"><img src="assets/tab-tickets.svg" width="24" height="24" alt=""><span>Билеты</span></button>
-        <button class="tab" data-tab="shop"><img src="assets/tab-shop.svg" width="24" height="24" alt=""><span>Магазин</span></button>
-        <button class="tab" data-tab="login"><img src="assets/tab-login.svg" width="24" height="24" alt=""><span>Войти</span></button>
+        <button class="tab is-on" data-tab="home"><img src="assets/tab2-home.svg?v=3" width="24" height="24" alt=""><span>Главная</span></button>
+        <button class="tab" data-tab="matches"><img src="assets/tab2-games.svg?v=3" width="24" height="24" alt=""><span>Игры</span></button>
+        <button class="tab" data-tab="tickets"><img src="assets/tab2-tickets.svg?v=3" width="24" height="24" alt=""><span>Билеты</span></button>
+        <button class="tab" data-tab="shop"><img src="assets/tab2-shop.svg?v=3" width="24" height="24" alt=""><span>Магазин</span></button>
+        <button class="tab" data-tab="login"><img src="assets/tab2-user.svg?v=3" width="24" height="24" alt=""><span>Войти</span></button>
       </nav>
     </div>
 
@@ -258,6 +271,28 @@
       <div class="story__nav"><i data-story-nav="-1"></i><i data-story-nav="1"></i></div>
     </div>
 
+    <!-- ============ LOCK SCREEN with a Live Activity (Apple Sports-like) ============ -->
+    <div class="lock" id="lock" aria-hidden="true">
+      <div class="lock__wall"><img src="assets/splash-stadium.webp" alt=""></div>
+      <div class="lock__top">
+        <svg class="lock__pad" viewBox="0 0 24 24" width="18" height="18"><path d="M7 10V7.5a5 5 0 0 1 10 0V10" fill="none" stroke="#fff" stroke-width="2"/><rect x="5" y="10" width="14" height="10" rx="2.5" fill="#fff"/></svg>
+        <p class="lock__date" id="lock-date">среда, 22 октября</p>
+        <p class="lock__time" id="lock-time">20:47</p>
+      </div>
+      <div class="la" id="la">
+        <div class="la__head"><span class="la__app"><span class="logo-m" data-logo="spartak-m"></span></span><span>Спартак · Live</span><span class="la__live"><i></i>LIVE</span></div>
+        <div class="la__main">
+          <div class="la__team"><span class="la__logo"><span class="logo-m" data-logo="spartak-m"></span></span><b>СПА</b></div>
+          <div class="la__score"><span class="la__num" id="la-h">1</span><span class="la__colon">:</span><span class="la__num" id="la-a">0</span><span class="la__min" id="la-min">63′</span></div>
+          <div class="la__team"><span class="la__logo"><span class="logo-m" data-logo="rubin"></span></span><b>РУБ</b></div>
+        </div>
+        <div class="la__bar"><i id="la-bar"></i><span class="la__ht"></span></div>
+        <p class="la__ev" id="la-ev"><b>⚽ 41′</b> Угальде · пас Барко</p>
+      </div>
+      <div class="lock__bottom"><span class="lock__btn"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M8 2h8l-1 6h3l-8 14 1-9H7z" fill="#fff"/></svg></span><span class="lock__hint">Смахните вверх, чтобы открыть</span><span class="lock__btn"><svg viewBox="0 0 24 24" width="22" height="22"><rect x="3" y="6" width="18" height="13" rx="3" fill="none" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12.5" r="3.5" fill="none" stroke="#fff" stroke-width="2"/><path d="M8 6l1.5-2h5L16 6" fill="none" stroke="#fff" stroke-width="2"/></svg></span></div>
+      <span class="lock__home"></span>
+    </div>
+
     <!-- ============ CHROME ============ -->
     <!-- ============ MENU (iOS sheet) ============ -->
     <div class="menu" id="menu" aria-hidden="true">
@@ -266,12 +301,18 @@
         <div class="scroller menu__scroller">
           <div class="menu__in">
             <div class="menu__list">
-              <button class="m-row mi tap"><b>Команды и штаб</b><span>Основа · ЖФК · Молодёжка · Академия</span></button>
+              <button class="m-row mi tap" data-go="matches"><b>Игры</b><span>Календарь, результаты, турнирная таблица, трансляции</span></button>
+              <button class="m-row mi tap" data-go="tickets"><b>Билеты</b><span>Билеты на матчи, абонементы, карта болельщика</span></button>
+              <button class="m-row mi tap"><b>Команды и штаб</b><span>Основа · ЖФК · Спартак-2 · Академия</span></button>
+              <button class="m-row mi tap" data-go="shop"><b>Магазин</b><span>Форма, мерч, подарочные сертификаты</span></button>
+              <button class="m-row mi tap"><b>Медиа</b><span>Новости, видео, фото, подкасты</span></button>
               <button class="m-row mi tap"><b>Стадион</b><span>Как добраться, парковка, VIP-ложи, ресторан, аренда полей</span></button>
-              <button class="m-row mi tap"><b>Музей и экскурсии</b><span>6 типов экскурсий · билеты по календарю</span></button>
+              <button class="m-row mi tap"><b>Музей</b><span>Экспозиция, трофеи, история клуба</span></button>
+              <button class="m-row mi tap"><b>Экскурсии</b><span>6 типов экскурсий · билеты по календарю</span></button>
               <button class="m-row mi tap"><b>Академия</b><span>Структура, команды, «Попади в Спартак»</span></button>
               <button class="m-row mi tap"><b>ЖФК</b><span>Состав, матчи, медиа, мерч</span></button>
               <button class="m-row mi tap"><b>О клубе</b><span>История, руководство, партнёры, легенды, бизнесу, франшиза</span></button>
+              <button class="m-row mi tap" data-go="login"><b>Личный кабинет</b><span>Профиль, мои билеты, заказы, уведомления</span></button>
             </div>
             <div class="m-block mi" id="promo">
               <div class="promo">
@@ -296,6 +337,9 @@
                   <button class="tap">Аренда площадок</button><button class="tap">Парковка</button>
                   <button class="tap">Тренеры Академии</button><button class="tap">«Попади в Спартак»</button>
                   <button class="tap">Медиа ЖФК</button><button class="tap">Ветераны и легенды</button>
+                  <button class="tap">Поиск</button><button class="tap">Уведомления</button>
+                  <button class="tap">Абонементы</button><button class="tap">Карта болельщика</button>
+                  <button class="tap">Трансляции</button><button class="tap">Штаб и тренеры</button>
                 </div>
               </div>
             </div>
@@ -325,25 +369,46 @@
     <div class="statusbar">
       <span class="sb-time">9:41</span>
       <span class="sb-gap"></span>
-      <div class="island" id="island"><div class="island__c"><span class="island__ico" id="island-ico"></span><span class="island__txt" id="island-txt"></span></div></div>
+      <div class="island" id="island"><div class="island__c"><span class="island__ico" id="island-ico"></span><span class="island__txt" id="island-txt"></span></div>
+        <!-- in-app Live Activity in the Dynamic Island: compact (score on both sides of the camera) and expanded -->
+        <div class="il" id="il" aria-hidden="true">
+          <div class="il__c"><span class="il__side"><span class="logo-m" data-logo="spartak-m"></span><b data-live="h">1</b></span><span class="il__side il__side--r"><b data-live="a">0</b><i class="il__min" data-live="min">63′</i></span></div>
+          <div class="il__x">
+            <div class="il__row">
+              <div class="il__team"><span class="logo-m" data-logo="spartak-m"></span><b>Спартак</b></div>
+              <div class="il__score"><span data-live="h">1</span><span class="il__colon">:</span><span data-live="a">0</span><i data-live="min">63′</i></div>
+              <div class="il__team"><span class="logo-m" data-logo="rubin"></span><b>Рубин</b></div>
+            </div>
+            <div class="il__bar"><i data-live="bar"></i></div>
+            <p class="il__ev" data-live="ev"><b>⚽ 41′</b> Угальде · пас Барко</p>
+          </div>
+        </div>
+      </div>
       <span class="sb-levels"><img src="assets/status-levels.svg" width="85" height="13" alt=""></span>
     </div>
 
-    <div class="splash" id="splash"><span class="logo-sp logo-sp--splash" data-logo="spartak"></span></div>
+    <!-- launch screen (Figma 4093:501): the stadium drifts slowly under a 60% dark veil, a floodlight sweeps across, the crest comes into focus -->
+    <div class="splash" id="splash">
+      <div class="splash__bg"><img src="assets/splash-stadium.webp" alt=""></div>
+      <i class="splash__beam"></i><i class="splash__veil"></i><i class="splash__glow"></i>
+      <span class="logo-sp logo-sp--splash" data-logo="spartak"></span>
+    </div>
   </div>
   </div><!-- /cam -->
 </div>
 <!-- presentation controls, same as concept 1 -->
-<div class="hud-hint" id="hint">Пробел — демо · <kbd>C</kbd> корзина · <kbd>M</kbd> меню · <kbd>R</kbd> сброс</div>
+<div class="hud-hint" id="hint">Пробел — демо · <kbd>C</kbd> корзина · <kbd>M</kbd> меню · <kbd>L</kbd> Live (блокировка) · <kbd>I</kbd> Live (в приложении) · <kbd>R</kbd> сброс</div>
 <div class="hud" id="hud">
   <button class="primary" id="demo-btn"><svg viewBox="0 0 14 14"><path d="M3 1.6v10.8a.6.6 0 0 0 .9.5l8.6-5.4a.6.6 0 0 0 0-1L3.9 1.1a.6.6 0 0 0-.9.5z"/></svg><span>Демо</span></button>
   <button id="bCart">Корзина</button>
   <button id="bMenu">Меню</button>
+  <button id="bLive">Live · экран блокировки</button>
+  <button id="bLiveApp">Live · в приложении</button>
   <button id="bReset">Сброс</button>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-<script src="app.js?v=25"></script>
+<script src="app.js?v=32"></script>
 <script src="switcher/switcher.js" data-current="2" data-c1="concept-1/index.html" data-c2="index.html" data-lift-el="#app" data-lift-when=".has-cart"></script>
 </body>
 </html>

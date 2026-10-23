@@ -6,7 +6,7 @@
   const RUB_MASK = `url('data:image/svg+xml,%3Csvg%20preserveAspectRatio%3D%22none%22%20overflow%3D%22visible%22%20style%3D%22display%3A%20block%3B%22%20width%3D%2250.5981%22%20height%3D%2268%22%20viewBox%3D%220%200%2050.5981%2068%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Cg%20id%3D%22clip0_10403_3649%22%3E%0A%3Cpath%20id%3D%22Vector%22%20d%3D%22M50.5981%200H0V68H50.5981V0Z%22%20fill%3D%22black%22%2F%3E%0A%3C%2Fg%3E%0A%3C%2Fsvg%3E')`;
   const CSKA_MASK = `url('data:image/svg+xml,%3Csvg%20preserveAspectRatio%3D%22none%22%20overflow%3D%22visible%22%20style%3D%22display%3A%20block%3B%22%20width%3D%2217.4238%22%20height%3D%2224%22%20viewBox%3D%220%200%2017.4238%2024%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Cg%20id%3D%22clip0_10403_3679%22%3E%0A%3Cpath%20id%3D%22Vector%22%20d%3D%22M17.4238%200H0V24H17.4238V0Z%22%20fill%3D%22black%22%2F%3E%0A%3C%2Fg%3E%0A%3C%2Fsvg%3E')`;
   const phone = $('#phone');
-  const mpag = $('#mpag'), mpagI = $('i', mpag), hbar = $('#hbar');
+  const hbar = $('#hbar');
 
   /* ================= logos ================= */
   const part = (src, inset) => `<span class="logo-part" style="inset:${inset}"><img src="${A}${src}" alt=""></span>`;
@@ -22,6 +22,7 @@
       ['m-logo-5.svg', '27.11% 0 15.14% 0'], ['m-logo-6.svg', '30.72% 6.24% 18.75% 6.26%'],
     ].map(([s, i]) => part(s, i)).join(''),
     kra: () => `<img class="fill" src="${A}club-kra.svg" alt="">`,
+    bal: () => `<img class="fill" src="${A}club-bal.svg" alt="">`,
     rod: () => `<span class="logo-part" style="inset:0 16.5% 0 15.97%"><img src="${A}rod.svg" alt=""></span>`,
     rubin: () => [
       ['rub-1.svg', '.41% 13.21% .44% 13.21%', '-0.279px -0.279px', true],
@@ -135,31 +136,114 @@
     return { el, cards, next, prev, get index() { return order[0]; } };
   }
 
+  /* ================= ambient backdrop (Apple Sports-like) =================
+     A red-black glow behind every screen, fixed to the viewport. Like Ambilight it takes on the colours
+     of what is in the middle of the screen — the current hero slide, the front ticket's stadium, or a
+     section palette — always pulled towards the club red and darkened, and eased over about a second. */
+  const ambient = (() => {
+    const el = $('#ambient');
+    const RED = [200, 16, 46];
+    const tone = (c, k, v) => { const m = c.map((x, i) => x * (1 - k) + RED[i] * k), mx = Math.max(...m, 1); return m.map(x => x / mx * v); };
+    const PAL = {
+      def: [[170, 16, 40], [72, 10, 22], [38, 14, 24]],
+      table: [[176, 18, 40], [70, 10, 22], [36, 18, 30]],
+      abon: [[214, 20, 48], [118, 8, 24], [60, 6, 16]],
+      teams: [[188, 16, 42], [92, 8, 22], [46, 10, 18]],
+      media: [[156, 4, 18], [104, 0, 12], [50, 4, 12]],
+      merch: [[148, 24, 44], [62, 16, 26], [34, 24, 36]],
+      all: [[124, 16, 32], [54, 10, 20], [30, 20, 30]],
+    };
+    // average colours of a picture's top / middle / bottom thirds (alpha-weighted)
+    const cache = new WeakMap();
+    const cv = document.createElement('canvas'); cv.width = cv.height = 24;
+    const cx = cv.getContext('2d', { willReadFrequently: true });
+    function sample(img) {
+      if (!img) return null;
+      if (cache.has(img)) return cache.get(img);
+      if (!img.complete || !img.naturalWidth) { img.addEventListener('load', refresh, { once: true }); return null; }
+      let out = null;
+      try {
+        cx.clearRect(0, 0, 24, 24); cx.drawImage(img, 0, 0, 24, 24);
+        const d = cx.getImageData(0, 0, 24, 24).data;
+        out = [0, 1, 2].map(b => {
+          const s = [0, 0, 0, 0];
+          for (let i = b * 8 * 24 * 4; i < (b + 1) * 8 * 24 * 4; i += 4) { const a = d[i + 3] / 255; s[0] += d[i] * a; s[1] += d[i + 1] * a; s[2] += d[i + 2] * a; s[3] += a; }
+          return s[3] > 1 ? s.slice(0, 3).map(v => v / s[3]) : RED;
+        });
+      } catch (_) { out = null; } // a file:// page taints the canvas → the red palette is used instead
+      cache.set(img, out);
+      return out;
+    }
+    const fromImg = img => { const s = sample(img); return s ? [tone(s[0], .5, 190), tone(s[1], .42, 100), tone(s[2], .36, 62)] : PAL.def; };
+    function target() {
+      const sc = $('.screen.is-active .scroller');
+      if (!sc) return PAL.def;
+      const pr = phone.getBoundingClientRect(), y = pr.top + pr.height * .42;
+      let node = null, best = Infinity;
+      $$('[data-amb]', sc).forEach(s => {
+        const r = s.getBoundingClientRect(), d = r.top <= y && r.bottom >= y ? -1 : Math.min(Math.abs(r.top - y), Math.abs(r.bottom - y));
+        if (d < best) { best = d; node = s; }
+      });
+      if (!node) return PAL.def;
+      const key = node.dataset.amb;
+      if (key === 'hero') return fromImg($('.dcard[data-pos="0"] .s-media img', node));
+      if (key === 'match') return fromImg($('.tk[data-pos="0"] .tk__photo img', node));
+      return PAL[key] || PAL.def;
+    }
+    const cur = PAL.def.map(c => c.slice());
+    let tgt = PAL.def, raf = 0, last = 0, pend = 0;
+    const paint = () => cur.forEach((c, i) => el.style.setProperty(`--a${i + 1}`, `rgb(${c.map(Math.round).join(' ')})`));
+    function step(now) {
+      const k = 1 - Math.exp(-Math.min(now - last, 64) / 650);
+      last = now;
+      let moving = false;
+      cur.forEach((c, i) => c.forEach((v, j) => { const d = tgt[i][j] - v; if (Math.abs(d) > .4) moving = true; c[j] = v + d * k; }));
+      paint();
+      raf = moving ? requestAnimationFrame(step) : 0;
+    }
+    function refresh() {
+      if (pend) return;
+      pend = requestAnimationFrame(() => {
+        pend = 0; tgt = target();
+        if (!raf) { last = performance.now(); raf = requestAnimationFrame(step); }
+      });
+    }
+    paint();
+    return { refresh };
+  })();
+
   /* ---------- hero ---------- */
   const SLIDES = [
-    { photo: 'slide-1-fig.webp', fill: true, date: '16 сентября 22:11', cat: 'Пресс-конференции', title: 'Карседо: «Играем первым номером»', cap: 'Карседо: «Играем первым номером»', desc: 'Пресс-конференция главного тренера красно-белых Хуана Карлоса Карседо после домашней победы.' },
-    { bg: 'slide-2-bg.webp', photo: 'slide-2.webp', crop: 'height:138.18%;left:-80.5%;top:0;width:261%', date: '13 сентября 16:27', cat: 'Мерч', title: 'Новая ретро-джерси', cap: 'Новая ретро-джерси', desc: 'Ретро-форма уже в продаже. Количество ограничено · 6 990 ₽.' },
-    { bg: 'slide-3-bg.webp', photo: 'slide-3.webp', date: '9 сентября 8:49', cat: 'Новости', title: 'Лучшие игроки месяца', mid: true, cap: 'Лучшие игроки месяца', desc: 'Игроки нашей команды в числе лучших игроков лиги в сентябре.' },
+    { photo: 'slide-1-v2.webp', act: ['play', 'icon-play.svg', 24, 'Смотреть видео'], date: '16 сентября 22:11', cat: 'Пресс-конференции', title: 'Карседо: «Играем первым номером»', cap: 'Карседо: «Играем первым номером»', desc: 'Пресс-конференция главного тренера красно-белых Хуана Карлоса Карседо после домашней победы.' },
+    { bg: 'slide-2-bg.webp', photo: 'slide-2.webp', crop: 'height:138.18%;left:-80.5%;top:0;width:261%', act: ['buy-jersey', 'icon-bag.svg', 20, 'Купить'], date: '13 сентября 16:27', cat: 'Мерч', title: 'Новая ретро-джерси', cap: 'Новая ретро-джерси', desc: 'Ретро-форма уже в продаже. Количество ограничено · 6 990 ₽.' },
+    { bg: 'slide-3-bg.webp', photo: 'slide-3.webp', act: ['read', 'icon-arrow-r.svg', 20, 'Читать'], date: '9 сентября 8:49', cat: 'Новости', title: 'Лучшие игроки месяца', mid: true, cap: 'Лучшие игроки месяца', desc: 'Игроки нашей команды в числе лучших игроков лиги в сентябре.' },
   ];
   // The soft edges are blurred copies of the slide's own picture under gradient masks (not a masked
   // backdrop-filter: Chrome drops that mask in several compositing cases and draws a hard edge).
-  // They live inside .s-media, so they share the Ken Burns zoom and stay pixel-aligned.
-  const SOFT = ['s-soft--top', 's-soft--bot1', 's-soft--bot2'];
+  // The picture is a full-screen-tall layer pinned to the card's bottom edge, so while the card collapses
+  // from full screen to the inset stack the photo slides inside it (and keeps a slower parallax after).
+  // The bottom copies live inside .s-media; the top copy sits at the card's top edge and is shifted by the
+  // same amount, so all copies share the Ken Burns zoom (.s-kb) and stay pixel-aligned.
+  const SOFT = ['s-soft--bot1', 's-soft--bot2'];
   const slideMedia = sl => `${sl.bg ? `<img class="s-bg" src="${A}${sl.bg}" alt="">` : ''}<img class="s-photo ${sl.fill ? 's-photo--fill' : ''} ${sl.crop ? 's-photo--crop' : ''} ${sl.mid ? 's-photo--mid' : ''} ${sl.top ? 's-photo--top' : ''}" src="${A}${sl.photo}" alt="">`;
   const deckEl = $('#deck');
   deckEl.innerHTML = SLIDES.map((sl, i) => `
     <article class="dcard slide" data-pos="${i}">
-      <div class="s-media">${slideMedia(sl)}${SOFT.map(c => `<div class="s-soft ${c}"><div class="s-soft__in">${slideMedia(sl)}</div></div>`).join('')}</div>
+      <div class="s-media"><div class="s-kb">${slideMedia(sl)}${SOFT.map(c => `<div class="s-soft ${c}"><div class="s-soft__in">${slideMedia(sl)}</div></div>`).join('')}</div></div>
+      <div class="s-softtop"><div class="s-softtop__pos"><div class="s-kb"><div class="s-soft__in">${slideMedia(sl)}</div></div></div></div>
       <div class="s-shade-top"></div><div class="s-shade-bot"></div>
       <div class="s-head"><p class="t-meta">${sl.date} &nbsp;·&nbsp; ${sl.cat}</p><h2>${sl.title}</h2></div>
-      <p class="s-desc">${sl.desc}</p>
+      <div class="s-foot"><button class="s-act tap ${sl.act[0] === 'play' ? 's-act--video' : ''}" data-action="${sl.act[0]}" aria-label="${sl.act[3]}"><img src="${A}${sl.act[1]}" width="${sl.act[2]}" height="${sl.act[2]}" alt=""></button><p class="s-desc">${sl.desc}</p></div>
       <div class="s-back"><p><b>${sl.cap}</b><span>·</span><span>${sl.date}</span></p></div>
     </article>`).join('');
-  const pagThumb = $('#hero-pag i');
-  const restartKenBurns = el => { const m = $('.s-media', el); m.style.animation = 'none'; m.offsetWidth; m.style.animation = ''; };
+  // diamond pagination (Figma slider-pagination): three elongated diamonds, the current one red
+  const setDpag = (el, i) => $$('i', el).forEach((d, k) => d.classList.toggle('on', k === i));
+  const heroDpag = $('#hero-dpag');
+  const restartKenBurns = el => $$('.s-kb', el).forEach(m => { m.style.animation = 'none'; m.offsetWidth; m.style.animation = ''; });
   let heroReady = false;
-  const heroDeck = createDeck(deckEl, { axes: 'xy', onExit: () => $('#home-scroller').scrollTo({ top: 700, behavior: 'smooth' }), onChange: i => {
-    pagThumb.style.transform = `translateY(${i * 22}px)`;
+  const heroDeck = createDeck(deckEl, { axes: 'xy', onExit: () => $('#home-scroller').scrollTo({ top: 640, behavior: 'smooth' }), onChange: i => {
+    setDpag(heroDpag, i);
+    ambient.refresh();
     if (heroReady) restartKenBurns(heroDeck.cards[i]);
   } });
   heroReady = true;
@@ -171,19 +255,28 @@
   const canAuto = () => heroVisible.v && !menuOpen && !storyOpen && currentTab === 'home' && !document.hidden && $('#home-scroller').scrollTop < 30;
   deckEl.addEventListener('deck-user', schedule);
 
-  /* ---------- matches (a looping stack too) ---------- */
+  /* ---------- matches: tickets (Figma 4088:3996) ----------
+     The main ticket sits in the middle, the next and the previous ones peek out from behind it on the
+     right and on the left (photo only, dimmed, trimmed top and bottom). When the block scrolls into view
+     the side tickets fan out from behind the main one; a swipe (or a tap on a side ticket) swaps them:
+     the side ticket comes to the front, the front one steps aside, the third passes behind to the other side. */
   const MATCHES = [
-    { id: 'rub', opp: 'rubin', name: 'Рубин', comp: 'Тур 11 · Альфа-Банк Российская Премьер-Лига', time: '18:30', date: '18 октября, 18:30 · Лукойл Арена', odds: ['1.56', '4.00', '5.60'], btn: 'Купить билет от 1 500 ₽', back: 'Спартак — Рубин · 18 окт' },
-    { id: 'kra', opp: 'kra', name: 'Краснодар', comp: 'Альфа-Банк Российская Премьер-Лига', time: '16:30', date: '10 октября, 16:30', odds: ['2.65', '3.40', '2.70'], btn: 'Купить билет от 1 800 ₽', back: 'Спартак — Краснодар · 10 окт' },
-    { id: 'rod', opp: 'rod', name: 'Родина', comp: 'Фонбет Кубок России', time: '19:45', date: '15 октября, 19:45', odds: ['1.18', '6.50', '11.00'], btn: 'Купить билет от 900 ₽', back: 'Спартак — Родина · 15 окт' },
+    { id: 'rub', l: ['spartak-m', 'Спартак'], r: ['rubin', 'Рубин'], photo: 'stadium-rub.webp', comp: 'Тур 11 · Альфа-Банк Российская Премьер-Лига', time: '18:30', date: '18 октября, 18:30 · Лукойл Арена', odds: ['1.56', '4.00', '5.60'], btn: 'Купить билет от 1 500 ₽' },
+    { id: 'kra', l: ['kra', 'Краснодар'], r: ['spartak-m', 'Спартак'], photo: 'stadium-kra.webp', comp: 'Тур 12 · Альфа-Банк Российская Премьер-Лига', time: '20:30', date: '22 октября, 20:30 · Ozon Арена', odds: ['2.02', '3.00', '2.40'] },
+    { id: 'bal', l: ['bal', 'Балтика'], r: ['spartak-m', 'Спартак'], photo: 'stadium-bal.webp', comp: 'Тур 13 · Альфа-Банк Российская Премьер-Лига', time: '18:30', date: '28 октября, 18:30 · Ростех Арена', odds: ['2.82', '3.20', '2.40'] },
   ];
+  // ticket outline with the side notches and the perforation, used as a mask (inlined for file://)
+  const TK_D = 'M306 0C323.673 0 338 14.327 338 32V190C328.059 190 320 198.059 320 208C320 217.941 328.059 226 338 226V272C338 289.673 323.673 304 306 304H32C14.327 304 0 289.673 0 272V226C9.941 226 18 217.941 18 208C18 198.059 9.941 190 0 190V32C0 14.327 14.327 0 32 0Z'
+    + Array.from({ length: 25 }, (_, k) => `M${(20.469 + k * 12.125).toFixed(3)} 207h6.062v2h-6.062z`).join('');
+  document.documentElement.style.setProperty('--tk-mask', `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="338" height="304" viewBox="0 0 338 304"><path fill-rule="evenodd" d="${TK_D}"/></svg>`)}")`);
+  const tkTeam = ([logo, name]) => `<div class="team"><div class="team__logo"><span class="logo-m" data-logo="${logo}"></span></div><p class="team__name">${name}</p></div>`;
   const matchCard = (m, i) => `
-    <article class="dcard mcard" data-pos="${i}">
-      <img class="match__shape" src="${A}ticket-shape-solid.svg" width="386" height="304" alt="">
-      <div class="match__in">
+    <article class="tk" data-pos="${i}" data-m="${m.id}">
+      <div class="tk__photo"><img src="${A}${m.photo}" alt=""></div>
+      <div class="tk__in">
         <p class="t-meta">${m.comp}</p>
         <div class="match__teams">
-          <div class="team"><div class="team__logo"><span class="logo-m" data-logo="spartak-m"></span></div><p class="team__name">Спартак</p></div>
+          ${tkTeam(m.l)}
           <div class="match__mid">
             <p class="match__time">${m.time}</p>
             <button class="cal-btn tap" data-action="calendar" data-m="${m.id}" aria-label="Добавить в календарь">
@@ -191,7 +284,7 @@
               <svg class="cal-check" viewBox="0 0 20 20" width="20" height="20"><path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
           </div>
-          <div class="team"><div class="team__logo"><span class="logo-m" data-logo="${m.opp}"></span></div><p class="team__name">${m.name}</p></div>
+          ${tkTeam(m.r)}
         </div>
         <div class="odds">
           <img src="${A}winline-small.svg" width="75" height="18" alt="Winline">
@@ -199,16 +292,80 @@
         </div>
         <div class="match__foot">
           <p class="t-meta">${m.date}</p>
-          <button class="btn-red tap" data-action="buy">${m.btn}</button>
+          ${m.btn ? `<button class="btn-red tap" data-action="buy">${m.btn}</button>` : ''}
         </div>
       </div>
-      <div class="s-back"><p>${m.back}</p></div>
+      <div class="tk__back"><img src="${A}${m.photo}" alt=""></div>
     </article>`;
+
+  function createTickets(el, onChange) {
+    const cards = $$('.tk', el), n = cards.length;
+    let order = cards.map((_, i) => i), busy = false;
+    // pos 0 — front, 1 — peeks on the right (next), 2 — on the left (previous)
+    const layout = () => { order.forEach((ci, pos) => { cards[ci].dataset.pos = pos; }); onChange(order[0]); };
+    layout();
+    function swap(dir) { // dir 1: the right ticket comes to the front, -1: the left one
+      if (busy) return; busy = true;
+      const front = cards[order[0]], incoming = cards[order[dir > 0 ? 1 : 2]], behind = cards[order[dir > 0 ? 2 : 1]];
+      cards.forEach(c => { c.style.transition = ''; c.style.transform = ''; });
+      incoming.style.zIndex = 4; front.style.zIndex = 3; behind.style.zIndex = 0;
+      behind.classList.add('is-behind');
+      order = dir > 0 ? [order[1], order[2], order[0]] : [order[2], order[0], order[1]];
+      layout();
+      setTimeout(() => { cards.forEach(c => { c.style.zIndex = ''; c.classList.remove('is-behind'); }); busy = false; }, 760);
+    }
+    // swipe the front ticket; the side ones lean in a little while it is dragged
+    let sx, sy, dx = 0, t0, mode = null, id = null;
+    el.addEventListener('pointerdown', e => {
+      if (busy || !el.classList.contains('in')) return;
+      sx = e.clientX; sy = e.clientY; dx = 0; t0 = performance.now(); mode = null; id = e.pointerId;
+    });
+    window.addEventListener('pointermove', e => {
+      if (id !== e.pointerId) return;
+      const ddx = e.clientX - sx, ddy = e.clientY - sy;
+      if (!mode) {
+        if (Math.abs(ddx) > 6 && Math.abs(ddx) >= Math.abs(ddy)) mode = 'x';
+        else if (Math.abs(ddy) > 6) { id = null; return; }
+        else return;
+        el.classList.add('is-dragging');
+      }
+      dx = ddx;
+      const f = cards[order[0]];
+      f.style.transition = 'none';
+      f.style.transform = `translateX(${dx}px) rotate(${dx * .02}deg)`;
+      const k = Math.min(Math.abs(dx) / 200, 1), side = cards[order[dx < 0 ? 1 : 2]];
+      side.style.transition = 'none';
+      side.style.transform = `translateX(${(dx < 0 ? 168 : -168) * (1 - k * .25)}px)`;
+      cards[order[dx < 0 ? 2 : 1]].style.transform = '';
+    });
+    const end = e => {
+      if (id !== e.pointerId) return;
+      id = null;
+      if (!mode) return;
+      mode = null;
+      dragMoved = true; setTimeout(() => { dragMoved = false; }, 0);
+      el.classList.remove('is-dragging');
+      const v = dx / Math.max(performance.now() - t0, 1);
+      if (dx < -70 || v < -.5) swap(1);
+      else if (dx > 70 || v > .5) swap(-1);
+      else cards.forEach(c => { c.style.transition = ''; c.style.transform = ''; });
+    };
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+    // a tap on a peeking side ticket brings it to the front
+    el.addEventListener('click', e => {
+      const c = e.target.closest('.tk');
+      if (!c || dragMoved || c.dataset.pos === '0') return;
+      e.stopPropagation(); e.preventDefault();
+      swap(c.dataset.pos === '1' ? 1 : -1);
+    }, true);
+    return { el, cards, next: () => swap(1), prev: () => swap(-1), get index() { return order[0]; } };
+  }
   function initMatchSection(sec) {
-    const el = $('.deck--match', sec);
+    const el = $('.tix', sec), pag = $('.dpag--match', sec);
     el.innerHTML = MATCHES.map(matchCard).join('');
     fillLogos(el);
-    sec._deck = createDeck(el, { axes: 'x', outX: 'perspective(900px) translate(-122%, 5%) rotateY(-28deg) rotate(-8deg)', onChange: () => updateMpag() });
+    sec._deck = createTickets(el, i => { setDpag(pag, i); ambient.refresh(); });
   }
 
   /* ================= stories ================= */
@@ -309,6 +466,93 @@
     });
   })();
 
+  /* ================= teams: one open card at a time, the block pins while scrolling walks through them ================= */
+  const TEAMS = [
+    ['Основной состав', 'РПЛ · Кубок России'], ['ЖФК «Спартак»', 'Женская суперлига'],
+    ['Спартак-2', 'Молодёжное первенство'], ['Академия', 'Юношеские первенства'],
+  ];
+  $('#tcards').innerHTML = TEAMS.map(([t, s], i) => `
+    <button class="tc" data-team="${i}">
+      <span class="tc__open"><img class="tc__tex" src="${A}team_tex.webp" alt=""><i class="tc__mul"></i><img class="tc__ph" src="${A}team${i + 1}.webp" alt=""></span>
+      <span class="tc__band tc__band--1"><i></i></span><span class="tc__band tc__band--2"><i></i></span>
+      <span class="tc__nm"><b>${t}</b><span>${s}</span></span>
+      <img class="tc__go" src="${A}team_arrow.svg" width="24" height="24" alt="">
+      <i class="tc__ln"></i>
+    </button>`).join('');
+  // Main squad is open by default. While the block is pinned (sticky, centred on screen) the scroll walks
+  // through the four teams — the next one opens, the previous one closes; a tap opens any card directly.
+  const teamsPin = $('#teams-pin'), teamsStick = $('#teams-stick'), tcs = $$('#tcards .tc');
+  const TEAM_STEP = 230; // scroll distance per team while pinned
+  let teamIdx = -1, teamScrollIdx = -1, teamPinTop = 120;
+  function setTeam(i) {
+    if (i === teamIdx) return;
+    teamIdx = i;
+    tcs.forEach((c, k) => c.classList.toggle('open', k === i));
+  }
+  function layoutTeams() {
+    const H = phone.clientHeight, h = teamsStick.offsetHeight;
+    teamPinTop = Math.max(Math.round((H - h) / 2) - 10, 112);
+    teamsStick.style.top = teamPinTop + 'px';
+    teamsPin.style.height = (h + TEAM_STEP * (tcs.length - 1)) + 'px';
+  }
+  function teamsOnScroll(y) {
+    const p = (y + teamPinTop - teamsPin.offsetTop) / TEAM_STEP;
+    const i = Math.max(0, Math.min(tcs.length - 1, Math.floor(p + .35)));
+    if (i !== teamScrollIdx) { teamScrollIdx = i; setTeam(i); }
+  }
+  setTeam(0);
+  tcs.forEach((c, k) => c.addEventListener('click', () => { if (!dragMoved) setTeam(k); }));
+
+  /* ================= slogan: kinetic type that stretches with the scroll ================= */
+  // The scroll speed sets a stretch amount that eases in and drains away at a constant rate (no springs, so
+  // the motion reads smooth and almost linear). Each line follows it with a little lag and is stretched
+  // vertically / squeezed horizontally, so the words pull like rubber in the direction of the scroll.
+  // Scrolling down dims the text, scrolling up brings it back to full strength.
+  const slogan = (() => {
+    const t = $('#slogan-t'), lines = $$('.sl-line', t);
+    let target = 0, vals = lines.map(() => 0), op = 1, opT = 1, raf = 0, lastY = 0, lastT = 0;
+    function frame() {
+      // linear drain of the target towards zero
+      target = Math.abs(target) < .008 ? 0 : target - Math.sign(target) * .008;
+      let moving = target !== 0;
+      lines.forEach((l, k) => {
+        vals[k] += (target - vals[k]) * (.075 - k * .015);
+        if (Math.abs(target - vals[k]) > .001 || Math.abs(vals[k]) > .001) moving = true;
+        const s = vals[k], a = Math.abs(s);
+        l.style.transformOrigin = s > 0 ? '50% 100%' : '50% 0%';
+        l.style.transform = `translate3d(0, ${(-s * 4 * (k + 1)).toFixed(2)}px, 0) scale(${(1 - a * .03).toFixed(4)}, ${(1 + a * .16).toFixed(4)})`;
+        l.style.letterSpacing = `${(a * .012).toFixed(4)}em`;
+      });
+      op += (opT - op) * .045;
+      if (Math.abs(opT - op) > .004) moving = true;
+      t.style.opacity = op.toFixed(3);
+      raf = moving ? requestAnimationFrame(frame) : 0;
+    }
+    return {
+      onScroll(y) {
+        const now = performance.now(), dt = Math.max(now - lastT, 8), v = (y - lastY) / dt;
+        lastY = y; lastT = now;
+        if (dt > 200) return;
+        const want = clamp(v * .45, -1, 1);
+        if (Math.abs(want) > Math.abs(target)) target += (want - target) * .35;
+        opT = v > .05 ? .72 : v < -.05 ? 1 : opT;
+        if (!raf) raf = requestAnimationFrame(frame);
+      },
+    };
+  })();
+
+  /* ================= stories pinned to the top (Telegram-style) ================= */
+  const stpin = $('#stpin');
+  $('#stpin-stack').innerHTML = STORIES.slice(0, 3).map((s, i) => `<span class="${s.fresh ? 'is-new' : ''}" style="--i:${i};background-image:url(${A}${s.img})"></span>`).join('');
+  let stpinOn = false;
+  function updateStpin(sc) {
+    const on = sc.id === 'home-scroller' && sc.closest('.screen.is-active') && storiesEl.getBoundingClientRect().bottom - phone.getBoundingClientRect().top < 104;
+    if (on === stpinOn) return;
+    stpinOn = on;
+    stpin.classList.toggle('is-on', on);
+  }
+  stpin.addEventListener('click', () => { const i = Math.max(0, STORIES.findIndex(s => s.fresh)); openStory(i, stpin); });
+
   /* ================= table ================= */
   const CLUBS = {
     kra: '<img src="assets/club-kra.svg" style="inset:0;width:100%;height:100%" alt="">',
@@ -350,8 +594,18 @@
         }
       });
     }, { root: scroller, threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
-    $$('.rv, .trophies, .sec-abon, .tbl__rows', scroller).forEach(el => io.observe(el));
+    $$('.rv, .trophies, .sec-abon, .tbl__rows', scroller).filter(el => !el.closest('#stories')).forEach(el => io.observe(el));
     observers.set(scroller, io);
+    // tickets fan out from behind the main one when the block is well on screen; they gather back once it
+    // is out of view below, so the entrance replays on the way down
+    const tio = new IntersectionObserver(entries => entries.forEach(en => {
+      const t = en.target;
+      if (en.isIntersecting && !t.classList.contains('in')) {
+        t.classList.add('in', 'is-entering');
+        clearTimeout(t._entT); t._entT = setTimeout(() => t.classList.remove('is-entering'), 1300);
+      } else if (!en.isIntersecting && en.boundingClientRect.top > en.rootBounds.bottom) t.classList.remove('in');
+    }), { root: scroller, threshold: .45 });
+    $$('.tix', scroller).forEach(el => tio.observe(el));
   }
 
   /* ================= scroll: tab bar minimise, edge, parallax ================= */
@@ -417,16 +671,33 @@
   }
   function updateAbon(sc) { if (!abonTl.size) initAbon(sc); } // ScrollTrigger follows the scroller itself
 
-  // hero: 0 → initial full-bleed stack, 1 → the whole stack scaled down a touch (see .deck-wrap)
-  const heroEl = $('.hero');
+  // hero: 0 → the first card edge to edge from the very top, 1 → the inset stack (Figma Frame 53).
+  // The card height is picked from the screen height so the two cards behind it and the pagination stay
+  // above the tab bar on the first screen (687.5px ×.96 = the 660px Figma card on a 874px screen).
+  // The photo is a screen-tall layer inside the card and moves slower than the card (parallax).
+  const heroEl = $('.hero'), storyBtns = $$('.st', storiesEl);
+  let heroH = 874, storiesOn = null;
   function setHero(y) {
-    heroEl.style.setProperty('--hp', easeOut(clamp(y / 220)).toFixed(4));
+    const hp = easeOut(clamp(y / 220));
+    heroEl.style.setProperty('--hp', hp.toFixed(4));
+    heroEl.style.setProperty('--par', `${clamp(y * .12, 0, 56).toFixed(2)}px`);
     heroVisible.v = y < 600;
+    // the stories come up as soon as the page moves
+    const on = hp > .2;
+    if (on !== storiesOn) { storiesOn = on; storyBtns.forEach(b => b.classList.toggle('in', on)); }
   }
+  const measureHero = () => {
+    heroH = phone.clientHeight;
+    heroEl.style.setProperty('--H', `${heroH}px`);
+    heroEl.style.setProperty('--ch', `${clamp(heroH - 210, 480, 687.5).toFixed(1)}px`);
+    setHero($('#home-scroller').scrollTop);
+  };
+  measureHero();
+  window.addEventListener('resize', measureHero);
 
-  // header: hidden at the top; after a short scroll the pinned iOS 27 glass buttons materialise —
-  // the platter pops in with a liquid squash while the glyph sharpens a beat later; on the way back
-  // up they shrink and dissolve. Other tabs always show them.
+  // header: at the top the bare glyphs sit right on the full-screen hero (Figma 4057:11751); after a short
+  // scroll the pinned iOS 27 glass platters materialise under them with a liquid squash while the glyphs
+  // re-settle a beat later; on the way back up the platters shrink and dissolve. Other tabs always show them.
   const hbtns = $$('.hbtn', hbar);
   let hdrOn = null;
   function setHeader(sc) {
@@ -439,6 +710,7 @@
     if (first) return;
     hbtns.forEach((b, i) => {
       const img = $$('img', b);
+      b = $('.hbtn__glass', b);
       b._a && b._a.cancel(); img.forEach(m => m._a && m._a.cancel());
       if (on) {
         b._a = b.animate([
@@ -449,9 +721,8 @@
           { opacity: 1, transform: 'none', filter: 'blur(0px)' },
         ], { duration: 680, delay: i * 55, easing: 'cubic-bezier(.22,.8,.3,1)', fill: 'backwards' });
         img.forEach((m, k) => { m._a = m.animate([
-          { opacity: 0, transform: 'scale(.6)', filter: 'blur(4px)' },
-          { opacity: 1, transform: 'none', filter: 'blur(0px)' },
-        ], { duration: 420, delay: 140 + i * 55 + k * 40, easing: 'cubic-bezier(.2,.9,.3,1.2)', fill: 'backwards' }); });
+          { transform: 'none' }, { transform: 'scale(.82)', offset: .35 }, { transform: 'none' },
+        ], { duration: 420, delay: 60 + i * 55 + k * 40, easing: 'cubic-bezier(.2,.9,.3,1.2)' }); });
       } else {
         b._a = b.animate([
           { opacity: 1, transform: 'none', filter: 'blur(0px)' },
@@ -475,10 +746,9 @@
     if (sc.closest('.screen.is-active')) {
       edge.classList.toggle('is-on', y > (sc.id === 'home-scroller' ? 60 : 8));
       setHeader(sc);
-      updateMpag();
     }
-    if (sc.id === 'home-scroller') setHero(y);
-    if (sc.closest('.screen.is-active')) { updatePops(sc); updateAbon(sc); }
+    if (sc.id === 'home-scroller') { setHero(y); teamsOnScroll(y); slogan.onScroll(y); }
+    if (sc.closest('.screen.is-active')) { updatePops(sc); updateAbon(sc); ambient.refresh(); updateStpin(sc); }
   }
   let isMin = false;
   function setMin(v) {
@@ -486,18 +756,6 @@
     isMin = v;
     tabbar.classList.toggle('is-min', v);
     trackPill();
-  }
-  // pagination bar floats at the vertical centre of the screen while a match stack is there
-  let activeMatch = null;
-  function updateMpag() {
-    const pr = phone.getBoundingClientRect(), cy = pr.top + pr.height / 2;
-    let hit = null;
-    $$('.screen.is-active .sec-match').forEach(sec => {
-      const r = sec.getBoundingClientRect();
-      if (sec._deck && r.top < cy - 24 && r.bottom > cy + 24) hit = sec;
-    });
-    mpag.classList.toggle('is-on', !!hit);
-    if (hit) { activeMatch = hit._deck; mpagI.style.transform = `translateY(${hit._deck.index * 22}px)`; }
   }
   $$('.scroller:not(.menu__scroller)').forEach(sc => {
     let raf;
@@ -529,7 +787,6 @@
     if (menuOpen) closeMenu();
     tabs.forEach(t => t.classList.toggle('is-on', t === btn));
     btn.classList.remove('bounce'); btn.offsetWidth; btn.classList.add('bounce');
-    $$('.tab img').forEach(img => { if (img.closest('.tab').dataset.tab === 'home') img.src = A + (name === 'home' ? 'tab-home-active.svg' : 'tab-home.svg'); });
     placePill();
     $$('.screen').forEach(s => s.classList.toggle('is-active', s.dataset.screen === name));
     currentTab = name;
@@ -538,7 +795,8 @@
     setMin(false);
     edge.classList.toggle('is-on', sc.scrollTop > (name === 'home' ? 60 : 8));
     setHeader(sc);
-    setTimeout(() => { updateMpag(); updatePops(sc); initAbon(sc); window.ScrollTrigger && ScrollTrigger.refresh(); }, 60);
+    updateStpin(sc);
+    setTimeout(() => { ambient.refresh(); updatePops(sc); initAbon(sc); window.ScrollTrigger && ScrollTrigger.refresh(); }, 60);
   }
   placePill();
   window.addEventListener('resize', placePill);
@@ -603,6 +861,7 @@
     $('#island-ico').innerHTML = icon === 'check'
       ? '<svg viewBox="0 0 20 20" width="16" height="16"><path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
       : `<img src="${A}${icon}" width="18" height="18" alt="">`;
+    island.classList.remove('il-x');
     island.classList.add('is-open');
     clearTimeout(islandT);
     islandT = setTimeout(() => island.classList.remove('is-open'), 2400);
@@ -633,18 +892,24 @@
     for (let i = 0; i < 8; i++) { const x = 3 * (1 - u) * (1 - u) * u * .32 + 3 * (1 - u) * u * u * 0 + u * u * u - t; const dx = 3 * (1 - u) * (1 - u) * .32 + 6 * (1 - u) * u * (0 - .32) + 3 * u * u * (1 - 0); u = Math.min(1, Math.max(0, u - x / (dx || 1))); }
     return 3 * (1 - u) * (1 - u) * u * .72 + 3 * (1 - u) * u * u + u * u * u;
   };
+  // The target is absolute (y0 + d·curve), so sub-pixel steps are not lost to scrollTop rounding and the
+  // content keeps pace with the rising bottom edge all the way. Any touch / wheel by the user cancels it,
+  // so the nudge never fights a real scroll.
+  let nudgeRaf = 0;
   function nudgeScroll(d) {
     const sc = $('.screen.is-active .scroller');
     if (!sc) return;
+    cancelAnimationFrame(nudgeRaf);
     const y0 = sc.scrollTop, t0 = performance.now();
-    let done = 0;
-    const step = now => {
-      const t = Math.min((now - t0) / 780, 1), v = d * iosCurve(t);
-      sc.scrollTop += v - done; done = v;
-      if (t < 1) requestAnimationFrame(step);
-    };
     if (d < 0 && y0 <= 0) return;
-    requestAnimationFrame(step);
+    const stop = () => { cancelAnimationFrame(nudgeRaf); sc.removeEventListener('wheel', stop); sc.removeEventListener('touchstart', stop); sc.removeEventListener('pointerdown', stop); };
+    sc.addEventListener('wheel', stop, { passive: true }); sc.addEventListener('touchstart', stop, { passive: true }); sc.addEventListener('pointerdown', stop);
+    const step = now => {
+      const t = Math.min((now - t0) / 780, 1);
+      sc.scrollTop = Math.max(0, y0 + d * iosCurve(t));
+      if (t < 1) nudgeRaf = requestAnimationFrame(step); else stop();
+    };
+    nudgeRaf = requestAnimationFrame(step);
   }
   // drag the bar down to dismiss it; the content layer and the tab bar follow the finger
   (() => {
@@ -685,6 +950,9 @@
       return;
     }
 
+    const go = e.target.closest('[data-go]');
+    if (go) { closeMenu(); return setTimeout(() => selectTab(go.dataset.go), 250); }
+
     const act = e.target.closest('[data-action]');
     if (!act) return;
     switch (act.dataset.action) {
@@ -711,6 +979,10 @@
         return;
       }
       case 'checkout': return islandToast('Переходим к оплате');
+      case 'play': return islandToast('Пресс-конференция · 12:48', 'icon-play.svg');
+      case 'buy-jersey': return islandToast('Ретро-джерси добавлена в корзину');
+      case 'read': return islandToast('Открываем статью');
+      case 'add': { act.classList.remove('pop-in'); act.offsetWidth; act.classList.add('pop-in'); return islandToast('Товар добавлен в корзину'); }
       case 'cart-info': return islandToast('В корзине 3 позиции');
     }
   }, true);
@@ -722,7 +994,7 @@
     const coord = e => axis === 'x' ? e.clientX : e.clientY;
     el.addEventListener('pointerdown', e => {
       if (e.pointerType !== 'mouse' || e.button !== 0) return;
-      if (axis === 'y' && e.target.closest('.hscroll, .deck')) return;
+      if (axis === 'y' && e.target.closest('.hscroll, .deck, .merch, .tix')) return;
       cancelAnimationFrame(raf);
       active = true; moved = false;
       start = last = coord(e); startScroll = el[prop]; lastT = performance.now(); vel = 0;
@@ -773,9 +1045,139 @@
     phone.addEventListener('pointerleave', () => { if (cur) { reset(cur); cur = null; } });
   })();
 
+
+  /* ================= merch: pages of two that snap (Figma 4043:5641) ================= */
+  // Native scroll-snap does the paging on touch (one page per swipe, scroll-snap-stop); with a mouse the row
+  // is dragged and released onto the nearest page in the drag direction.
+  $$('[data-merch]').forEach(row => {
+    const page = () => { const c = $$('.prod', row); return c.length > 1 ? c[1].offsetLeft - c[0].offsetLeft : row.clientWidth; };
+    let x0 = null, s0 = 0, moved = false;
+    row.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse' || e.button !== 0) return; x0 = e.clientX; s0 = row.scrollLeft; moved = false; row.classList.add('is-drag'); });
+    window.addEventListener('pointermove', e => {
+      if (x0 == null) return;
+      const d = e.clientX - x0;
+      if (Math.abs(d) > 5) moved = true;
+      row.scrollLeft = s0 - d;
+    });
+    window.addEventListener('pointerup', e => {
+      if (x0 == null) return;
+      const d = e.clientX - x0; x0 = null;
+      row.classList.remove('is-drag');
+      if (!moved) return;
+      dragMoved = true; setTimeout(() => { dragMoved = false; }, 0);
+      const P = page(), cur = Math.round(s0 / P), to = Math.abs(d) > 40 ? cur + (d < 0 ? 1 : -1) : cur;
+      row.scrollTo({ left: Math.max(0, to) * P, behavior: 'smooth' });
+    });
+  });
+
+  /* ================= sponsors: partners scroll by three, with a pause ================= */
+  (() => {
+    const row = $('#sponsors-row');
+    if (!row) return;
+    const items = $$('img', row), PER = 3, n = items.length;
+    items.slice(0, PER).forEach(img => row.appendChild(img.cloneNode(true))); // seamless loop
+    let page = 0;
+    const step = () => (items[PER].offsetLeft - items[0].offsetLeft);
+    setInterval(() => {
+      if (document.hidden) return;
+      page++;
+      row.style.transition = 'transform 1.1s cubic-bezier(.65,0,.35,1)';
+      row.style.transform = `translateX(${-page * step()}px)`;
+      if (page * PER >= n) setTimeout(() => { page = 0; row.style.transition = 'none'; row.style.transform = 'translateX(0)'; }, 1150);
+    }, 3200);
+  })();
+
+  /* ================= Live Activity (Apple Sports-like): lock screen + in-app Dynamic Island ================= */
+  // One running match feeds two surfaces:
+  //  • L — the lock screen: wallpaper, big clock and the Live Activity card;
+  //  • I — inside the app, over all content: the Dynamic Island turns into the compact activity (crest + score
+  //    on both sides of the camera); a tap expands it into the large card, it folds back by itself.
+  // The minute ticks, the bar fills and after a moment a goal lands — the score flips and the island
+  // opens to show it. Unlocking the phone hands the activity over to the island, as on iOS.
+  let lockOn = false;
+  const live = (() => {
+    const lock = $('#lock'), la = $('#la'), isl = $('#island'), il = $('#il');
+    fillLogos(lock); fillLogos(il);
+    let min = 63, home = 1, away = 0, tick = null, goalT = null, scored = false, appOn = false, foldT = null;
+    const all = k => $$(`[data-live="${k}"]`);
+    const paint = () => {
+      $('#la-min').textContent = `${min}′`;
+      $('#la-bar').style.transform = `scaleX(${Math.min(min / 90, 1).toFixed(3)})`;
+      all('min').forEach(e => { e.textContent = `${min}′`; });
+      all('bar').forEach(e => { e.style.transform = `scaleX(${Math.min(min / 90, 1).toFixed(3)})`; });
+    };
+    const now = () => { const d = new Date(); $('#lock-time').textContent = `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+      const t = d.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' }); $('#lock-date').textContent = t[0].toUpperCase() + t.slice(1); };
+    const running = () => lockOn || appOn;
+    function start() {
+      paint();
+      if (!tick) tick = setInterval(() => { if (min < 90) { min++; paint(); } }, 2400);
+      if (!scored && !goalT) goalT = setTimeout(goal, lockOn ? 4200 : 5200);
+    }
+    function stopIfIdle() { if (running()) return; clearInterval(tick); tick = null; clearTimeout(goalT); goalT = null; }
+    function goal() {
+      goalT = null; scored = true; home++;
+      const ev = `<b>⚽ ${min}′</b> Угальде · дубль!`;
+      [$('#la-h'), ...all('h')].forEach(el => { el.classList.remove('flip'); el.offsetWidth; el.classList.add('flip'); setTimeout(() => { el.textContent = home; }, 220); });
+      $('#la-ev').innerHTML = ev; all('ev').forEach(e => { e.innerHTML = ev; });
+      la.classList.remove('goal'); la.offsetWidth; la.classList.add('goal');
+      if (appOn) { expand(true); isl.classList.remove('il-goal'); isl.offsetWidth; isl.classList.add('il-goal'); }
+    }
+    // ---- in-app island ----
+    function expand(auto) {
+      clearTimeout(foldT);
+      isl.classList.add('il-x');
+      foldT = setTimeout(() => isl.classList.remove('il-x'), auto ? 4200 : 5200);
+    }
+    function appShow(expandFirst = true) {
+      if (appOn) return;
+      appOn = true; paint();
+      isl.classList.remove('is-open');
+      isl.classList.add('il-on'); il.setAttribute('aria-hidden', 'false');
+      if (expandFirst) setTimeout(() => expand(true), 650);
+      start();
+    }
+    function appHide() {
+      if (!appOn) return;
+      appOn = false; clearTimeout(foldT);
+      isl.classList.remove('il-on', 'il-x', 'il-goal'); il.setAttribute('aria-hidden', 'true');
+      stopIfIdle();
+    }
+    isl.addEventListener('click', () => { if (!appOn) return; isl.classList.contains('il-x') ? (clearTimeout(foldT), isl.classList.remove('il-x')) : expand(false); });
+    // ---- lock screen ----
+    function show() {
+      if (lockOn) return;
+      if (menuOpen) closeMenu();
+      if (storyOpen) closeStory();
+      lockOn = true; now();
+      lock.classList.add('is-on'); lock.setAttribute('aria-hidden', 'false');
+      phone.classList.add('locked');
+      start();
+    }
+    function hide() {
+      if (!lockOn) return;
+      lockOn = false;
+      lock.classList.remove('is-on'); lock.setAttribute('aria-hidden', 'true');
+      phone.classList.remove('locked');
+      setTimeout(() => appShow(false), 550); // the activity carries on in the island
+    }
+    // swipe up anywhere on the lock screen (or tap the bottom bar) unlocks
+    let y0 = null;
+    lock.addEventListener('pointerdown', e => { y0 = e.clientY; });
+    lock.addEventListener('pointerup', e => { if (y0 != null && (y0 - e.clientY > 60 || e.target.closest('.lock__bottom, .lock__home'))) hide(); y0 = null; });
+    return {
+      show, hide, toggle: () => (lockOn ? hide() : show()),
+      appShow, appHide, appToggle: () => (appOn ? appHide() : appShow()), expand,
+      get appOn() { return appOn; },
+      reset() { hide(); appHide(); },
+    };
+  })();
+
   /* ================= intro ================= */
   phone.classList.add('intro');
-  const initScrollFx = () => { const sc = $('#home-scroller'); setHero(sc.scrollTop); setHeader(sc); updatePops(sc); updateAbon(sc); };
+  const initScrollFx = () => { const sc = $('#home-scroller'); layoutTeams(); setHero(sc.scrollTop); setHeader(sc); updatePops(sc); updateAbon(sc); ambient.refresh(); };
+  window.addEventListener('resize', layoutTeams);
+  window.addEventListener('load', layoutTeams);
   requestAnimationFrame(initScrollFx);
   watchReveals($('#home-scroller'));
   const splash = $('#splash');
@@ -789,11 +1191,11 @@
       restartKenBurns(cards[heroDeck.index]);
     });
     schedule();
-  }, 1150);
+  }, 2300);
 
   document.addEventListener('visibilitychange', () => { if (!document.hidden) schedule(); });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { if (storyOpen) closeStory(); else if (menuOpen) closeMenu(); }
+    if (e.key === 'Escape') { if (lockOn) live.hide(); else if (storyOpen) closeStory(); else if (menuOpen) closeMenu(); }
     if (storyOpen && e.key === 'ArrowRight') showStory(storyIdx + 1);
     if (storyOpen && e.key === 'ArrowLeft') showStory(storyIdx - 1);
     if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -802,9 +1204,12 @@
     if (e.code === 'Space' || k === 'd' || k === 'в') { e.preventDefault(); demo.on ? demo.stop() : demo.start(); }
     else if (k === 'c' || k === 'с') { demo.stop(); cartOpen ? closeCart() : openCart(); }
     else if (k === 'm' || k === 'ь') { demo.stop(); menuOpen ? closeMenu() : openMenu(); }
+    else if (k === 'l' || k === 'д') { demo.stop(); live.toggle(); }
+    else if (k === 'i' || k === 'ш') { demo.stop(); live.appToggle(); }
     else if (k === 'r' || k === 'к') { demo.stop(); resetAll(); }
   });
   function resetAll() {
+    live.reset();
     if (storyOpen) closeStory();
     if (menuOpen) closeMenu();
     closeCart();
@@ -813,6 +1218,8 @@
   }
   $('#bCart').addEventListener('click', () => { demo.stop(); cartOpen ? closeCart() : openCart(); });
   $('#bMenu').addEventListener('click', () => { demo.stop(); menuOpen ? closeMenu() : openMenu(); });
+  $('#bLive').addEventListener('click', () => { demo.stop(); live.toggle(); });
+  $('#bLiveApp').addEventListener('click', () => { demo.stop(); live.appToggle(); });
   $('#bReset').addEventListener('click', () => { demo.stop(); resetAll(); });
   $('#hud').addEventListener('pointerup', () => setTimeout(() => document.activeElement && document.activeElement.blur(), 0));
 
@@ -908,12 +1315,12 @@
 
       // match: add to calendar, pick odds, swipe the stack, buy → cart rises from below
       const ms = $('.screen[data-screen="home"] .sec-match');
-      const front = () => $('.mcard[data-pos="0"]', ms);
-      await swipeScroll(home, yOf(home, ms, 170), 1000, id); await wait(300, id);
+      const front = () => $('.tk[data-pos="0"]', ms);
+      await swipeScroll(home, yOf(home, ms, 220), 1000, id); await wait(1300, id);
       await tap($('.cal-btn', front()), id); await wait(1300, id);
       await tap($$('.odd', front())[0], id); await wait(700, id);
       await swipeX(front(), id); await wait(1100, id);
-      await swipeX(front(), id); await wait(1100, id);
+      await swipeX(front(), id, 170); await wait(1100, id);
       await tap($('.btn-red', front()), id); await wait(2200, id);
 
       // table: switch competition and back
@@ -926,14 +1333,22 @@
       const ab = $('.screen[data-screen="home"] .sec-abon');
       await swipeScroll(home, yOf(home, $('.abon-pin', ab), ABON_END), 3400, id); await wait(1100, id);
 
-      // teams → media → merch carousel → to the end and back
+      // teams: the block pins, the scroll walks through the cards → media → merch pages → to the end and back
+      const tp = teamsPin.offsetTop - teamPinTop;
+      await swipeScroll(home, tp, 1300, id); await wait(900, id);
+      for (let k = 1; k < tcs.length; k++) { await swipeScroll(home, tp + TEAM_STEP * k, 800, id); await wait(700, id); }
       await swipeScroll(home, yOf(home, $('.sec-media'), 70), 1500, id); await wait(900, id);
       const merch = $('.screen[data-screen="home"] .merch');
       await swipeScroll(home, yOf(home, merch.closest('.sec'), 90), 1200, id); await wait(300, id);
-      await new Promise(r => { merch.scrollTo({ left: 220, behavior: 'smooth' }); setTimeout(r, 1000); }); alive(id);
+      await new Promise(r => { merch.scrollTo({ left: 181, behavior: 'smooth' }); setTimeout(r, 1200); }); alive(id);
       merch.scrollTo({ left: 0, behavior: 'smooth' }); await wait(800, id);
       await swipeScroll(home, home.scrollHeight, 1400, id); await wait(700, id);
       await swipeScroll(home, 260, 2200, id); await wait(500, id);
+
+      // live activity on the lock screen
+      live.show(); await wait(6500, id); live.hide(); await wait(1800, id);
+      await tap($('#island'), id); await wait(4200, id);
+      live.appHide(); await wait(800, id);
 
       // menu sheet: open, scroll, close
       await tap($('#hbar [data-action="open-menu"]'), id); await wait(1300, id);
