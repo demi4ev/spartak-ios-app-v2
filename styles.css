@@ -786,7 +786,7 @@ em.ink { color: #000; }
 .splash { position: absolute; inset: 0; z-index: 100; background: #0b0b0d; display: grid; place-items: center; overflow: hidden; transition: opacity .7s var(--ease-out), visibility 0s .7s; }
 .splash.is-done { opacity: 0; visibility: hidden; }
 .splash__bg { position: absolute; inset: 0; animation: splash-bg-in 1.6s var(--ease-out) both; }
-.splash__bg img { position: absolute; inset: -6%; width: 112%; height: 112%; object-fit: cover; object-position: 50% 50%; max-width: none;
+.splash__bg img { position: absolute; inset: -6%; width: 112%; height: 112%; object-fit: cover; object-position: 47% 50%; max-width: none;
   animation: splash-drift 7s cubic-bezier(.25, .1, .25, 1) both; will-change: transform; }
 @keyframes splash-bg-in { from { opacity: 0; filter: blur(14px) brightness(.4); } to { opacity: 1; filter: blur(0) brightness(1); } }
 @keyframes splash-drift { from { transform: scale(1.16) translate3d(2.5%, 3%, 0); } to { transform: scale(1) translate3d(-1.5%, -1%, 0); } }
@@ -919,7 +919,7 @@ html.mobile .s-soft__in { inset: -14px; }
 .lock { position: absolute; inset: 0; z-index: 95; visibility: hidden; opacity: 0; transform: translateY(-4%) scale(1.04); transition: opacity .45s var(--ease-out), transform .7s var(--ease-ios), visibility 0s .7s; overflow: hidden; color: #fff; }
 .lock.is-on { visibility: visible; opacity: 1; transform: none; transition: opacity .35s var(--ease-out), transform .7s var(--ease-ios); }
 .lock__wall { position: absolute; inset: 0; }
-.lock__wall img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.12); filter: saturate(1.1); transition: transform 8s linear; }
+.lock__wall img { width: 100%; height: 100%; object-fit: cover; object-position: 47% 50%; transform: scale(1.12); filter: saturate(1.1); transition: transform 8s linear; }
 .lock.is-on .lock__wall img { transform: scale(1.02); }
 .lock__wall::after { content: ''; position: absolute; inset: 0; background: linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.3) 40%, rgba(0,0,0,.7)); }
 .phone.locked .sb-time { visibility: hidden; }
