@@ -1206,6 +1206,7 @@
     else if (k === 'm' || k === 'ь') { demo.stop(); menuOpen ? closeMenu() : openMenu(); }
     else if (k === 'l' || k === 'д') { demo.stop(); live.toggle(); }
     else if (k === 'i' || k === 'ш') { demo.stop(); live.appToggle(); }
+    else if (k === 'h' || k === 'р') { toggleHeads(); }
     else if (k === 'r' || k === 'к') { demo.stop(); resetAll(); }
   });
   function resetAll() {
@@ -1220,6 +1221,14 @@
   $('#bMenu').addEventListener('click', () => { demo.stop(); menuOpen ? closeMenu() : openMenu(); });
   $('#bLive').addEventListener('click', () => { demo.stop(); live.toggle(); });
   $('#bLiveApp').addEventListener('click', () => { demo.stop(); live.appToggle(); });
+  // headline alignment: centered (default) or left-aligned below the hero (Figma 4191:1873); two separate HUD buttons
+  function setHeads(left) {
+    phone.classList.toggle('hl-left', left);
+    [['#bHeadC', !left], ['#bHeadL', left]].forEach(([id, on]) => { const b = $(id); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+  }
+  const toggleHeads = () => setHeads(!phone.classList.contains('hl-left'));
+  $('#bHeadC').addEventListener('click', () => setHeads(false));
+  $('#bHeadL').addEventListener('click', () => setHeads(true));
   $('#bReset').addEventListener('click', () => { demo.stop(); resetAll(); });
   $('#hud').addEventListener('pointerup', () => setTimeout(() => document.activeElement && document.activeElement.blur(), 0));
 

@@ -821,6 +821,15 @@ em.ink { color: #000; }
 .splash.is-done .logo-sp--splash { transform: scale(2.6); transition: transform .7s var(--ease-ios); }
 .splash.is-done .splash__bg { transform: scale(1.08); transition: transform .9s var(--ease-ios); }
 
+/* ---------- HEADLINES: left-aligned variant (Figma 4191:1873) — toggled from the HUD / H key; applies to the blocks below the hero ---------- */
+.phone.hl-left .label { flex-direction: row; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.phone.hl-left .label .h-display { text-align: left; }
+.phone.hl-left .label .more { flex-shrink: 0; white-space: nowrap; }
+.phone.hl-left .sec-merch .label { padding: 0 24px; }
+.phone.hl-left .sec-teams .label .more { opacity: 1; color: #fff; }
+.phone.hl-left .media .more { color: #16161b; }
+.phone.hl-left .card--all .h-display, .phone.hl-left .card--all .t-small { text-align: left; padding-inline: 16px; }
+
 /* ---------- PRESENTATION CONTROLS (HUD + hint, identical to concept 1) ---------- */
 .hud{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:6px;padding:6px;border-radius:999px;
   background:rgba(40,40,46,.62);backdrop-filter:blur(22px) saturate(1.6);-webkit-backdrop-filter:blur(22px) saturate(1.6);
